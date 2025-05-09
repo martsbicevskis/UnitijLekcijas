@@ -51,21 +51,44 @@ public class PlayerShooting : MonoBehaviour
     {
         // Play muzzle flash effect
         muzzleFlash.Play();
+        Debug.Log("Shot fired!");
 
         // Create a ray from the camera
         RaycastHit hit;
         if (Physics.Raycast(playerCamera.transform.position, playerCamera.transform.forward, out hit, range))
         {
-            // Check if we hit something that can take damage
-            Target target = hit.transform.GetComponent<Target>();
-            if (target != null)
+            Debug.Log($"Hit something: {hit.transform.name} on layer {LayerMask.LayerToName(hit.transform.gameObject.layer)}");
+            
+            // Check if we hit an enemy (including parent objects)
+            Enemy enemy = hit.transform.GetComponent<Enemy>();
+            if (enemy == null)
             {
-                target.TakeDamage(damage);
+                enemy = hit.transform.GetComponentInParent<Enemy>();
+            }
+            
+            if (enemy != null)
+            {
+                Debug.Log($"Hit enemy! Applying {damage} damage");
+                enemy.TakeDamage(damage);
+            }
+            // Check if we hit a target
+            else
+            {
+                Target target = hit.transform.GetComponent<Target>();
+                if (target != null)
+                {
+                    Debug.Log($"Hit target! Applying {damage} damage");
+                    target.TakeDamage(damage);
+                }
             }
 
             // Create impact effect
             GameObject impact = Instantiate(impactEffect, hit.point, Quaternion.LookRotation(hit.normal));
             Destroy(impact, 2f); // Destroy impact effect after 2 seconds
+        }
+        else
+        {
+            Debug.Log("Shot missed - no hit detected");
         }
     }
 }
