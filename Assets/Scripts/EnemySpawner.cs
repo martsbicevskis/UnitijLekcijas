@@ -7,6 +7,8 @@ public class EnemySpawner : MonoBehaviour
     public float spawnInterval = 5f;
     public float spawnDistance = 20f;
     public int maxEnemies = 10;
+    public float spawnHeight = 10f; // Height above ground to spawn enemies
+    public float spawnHeightVariation = 3f; // Random variation in spawn height
 
     [Header("Enemy Settings")]
     public float minHealth = 50f;
@@ -41,26 +43,26 @@ public class EnemySpawner : MonoBehaviour
         // Calculate a random position around the player
         Vector3 randomDirection = Random.insideUnitSphere.normalized;
         Vector3 spawnPosition = player.position + randomDirection * spawnDistance;
-        spawnPosition.y = 0; // Keep enemies on the ground
+        
+        // Add random height variation
+        float randomHeight = spawnHeight + Random.Range(-spawnHeightVariation, spawnHeightVariation);
+        spawnPosition.y = randomHeight; // Spawn enemies in the air
 
-        // Check if the position is valid (on the NavMesh)
-        UnityEngine.AI.NavMeshHit hit;
-        if (UnityEngine.AI.NavMesh.SamplePosition(spawnPosition, out hit, 5f, UnityEngine.AI.NavMesh.AllAreas))
+        // Spawn the enemy at the calculated position
+        GameObject enemy = Instantiate(enemyPrefab, spawnPosition, Quaternion.identity);
+        
+        // Set the enemy tag and layer
+        enemy.tag = "Enemy";
+        enemy.layer = LayerMask.NameToLayer("Enemy");
+        
+        // Set random properties
+        Enemy enemyComponent = enemy.GetComponent<Enemy>();
+        if (enemyComponent != null)
         {
-            // Spawn the enemy
-            GameObject enemy = Instantiate(enemyPrefab, hit.position, Quaternion.identity);
-            
-            // Set the enemy tag and layer
-            enemy.tag = "Enemy";
-            enemy.layer = LayerMask.NameToLayer("Enemy");
-            
-            // Set random properties
-            Enemy enemyComponent = enemy.GetComponent<Enemy>();
-            if (enemyComponent != null)
-            {
-                enemyComponent.health = Random.Range(minHealth, maxHealth);
-                enemyComponent.moveSpeed = Random.Range(minSpeed, maxSpeed);
-            }
+            enemyComponent.health = Random.Range(minHealth, maxHealth);
+            enemyComponent.moveSpeed = Random.Range(minSpeed, maxSpeed);
         }
+        
+        Debug.Log($"Enemy spawned at height: {spawnPosition.y}");
     }
 } 

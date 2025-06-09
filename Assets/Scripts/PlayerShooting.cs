@@ -8,6 +8,13 @@ public class PlayerShooting : MonoBehaviour
     public float fireRate = 15f;
     public Camera playerCamera;
 
+    [Header("Barrel Spawning")]
+    public GameObject barrelPrefab;
+    public float barrelSpawnDistance = 5f;
+    public LayerMask barrelSpawnLayers = -1; // Default to all layers
+    public float barrelSpawnCooldown = 1f;
+    private float nextBarrelSpawnTime = 0f;
+
     [Header("Effects")]
     private WeaponEffects weaponEffects;
     private ParticleSystem muzzleFlash;
@@ -45,6 +52,43 @@ public class PlayerShooting : MonoBehaviour
             nextTimeToFire = Time.time + 1f / fireRate;
             Shoot();
         }
+
+        // Check if player can spawn barrel (right mouse button)
+        if (Input.GetButtonDown("Fire2") && Time.time >= nextBarrelSpawnTime)
+        {
+            nextBarrelSpawnTime = Time.time + barrelSpawnCooldown;
+            SpawnBarrel();
+        }
+    }
+
+    void SpawnBarrel()
+    {
+        if (barrelPrefab == null)
+        {
+            Debug.LogWarning("Barrel prefab is not assigned!");
+            return;
+        }
+
+        // Create a ray from the camera
+        RaycastHit hit;
+        Vector3 spawnPosition;
+        
+        if (Physics.Raycast(playerCamera.transform.position, playerCamera.transform.forward, out hit, range, barrelSpawnLayers))
+        {
+            // Spawn barrel at the hit point
+            spawnPosition = hit.point;
+            Debug.Log($"Spawning barrel at hit point: {spawnPosition}");
+        }
+        else
+        {
+            // Spawn barrel at maximum range if no hit detected
+            spawnPosition = playerCamera.transform.position + playerCamera.transform.forward * barrelSpawnDistance;
+            Debug.Log($"Spawning barrel at max distance: {spawnPosition}");
+        }
+
+        // Instantiate the barrel
+        GameObject barrel = Instantiate(barrelPrefab, spawnPosition, Quaternion.identity);
+        Debug.Log($"Barrel spawned successfully at {spawnPosition}");
     }
 
     void Shoot()

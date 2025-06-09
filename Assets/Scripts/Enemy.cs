@@ -10,24 +10,69 @@ public class Enemy : MonoBehaviour
     public float attackDamage = 10f;
     public float attackCooldown = 1f;
 
+    [Header("Physics Settings")]
+    public float gravity = 9.81f;
+    public float groundCheckDistance = 0.1f;
+    public LayerMask groundLayer = 1; // Default layer
+    public float airControl = 0.3f; // How much control enemy has while in air
+
+    [Header("Pathfinding Settings")]
+    public float pathUpdateInterval = 0.5f;
+    public float stoppingDistance = 1f;
+    public float pathfindingHeight = 1f; // Height to check for pathfinding
+
+    [Header("Barrel Interaction")]
+    public float barrelKnockbackForce = 5f;
+    public float barrelDetectionRadius = 2f;
+    public string barrelTag = "Barrel"; // Configurable tag
+
     [Header("Visual Effects")]
     public GameObject hitEffect;
     public float hitEffectDuration = 0.5f;
 
     private Transform player;
-    private NavMeshAgent agent;
+    private Rigidbody rb;
+    private NavMeshAgent pathfindingAgent;
     private float lastAttackTime;
     private bool isDead = false;
     private CapsuleCollider enemyCollider;
+    private bool isGrounded = false;
+    private Vector3 moveDirection;
+    private float nextPathUpdate;
+    private Vector3 currentDestination;
+    private bool hasValidPath = false;
+    private bool isPathfinding = false;
 
     void Start()
     {
         // Find the player
         player = GameObject.FindGameObjectWithTag("Player").transform;
         
-        // Set up the NavMeshAgent
-        agent = GetComponent<NavMeshAgent>();
-        agent.speed = moveSpeed;
+        // Set up Rigidbody for physics
+        rb = GetComponent<Rigidbody>();
+        if (rb == null)
+        {
+            rb = gameObject.AddComponent<Rigidbody>();
+        }
+        rb.mass = 1f;
+        rb.drag = 0.5f;
+        rb.angularDrag = 0.5f;
+        rb.useGravity = true;
+        rb.constraints = RigidbodyConstraints.FreezeRotationX | RigidbodyConstraints.FreezeRotationZ;
+
+        // Set up NavMeshAgent for pathfinding (but not movement)
+        pathfindingAgent = GetComponent<NavMeshAgent>();
+        if (pathfindingAgent == null)
+        {
+            pathfindingAgent = gameObject.AddComponent<NavMeshAgent>();
+        }
+        // Configure NavMeshAgent to not interfere with physics
+        pathfindingAgent.enabled = false;
+        pathfindingAgent.radius = 0.5f;
+        pathfindingAgent.height = 2f;
+        pathfindingAgent.stoppingDistance = stoppingDistance;
+        pathfindingAgent.updatePosition = false; // Don't let NavMeshAgent control position
+        pathfindingAgent.updateRotation = false; // Don't let NavMeshAgent control rotation
 
         // Set up the collider
         enemyCollider = GetComponent<CapsuleCollider>();
@@ -41,6 +86,11 @@ public class Enemy : MonoBehaviour
 
         // Make sure the enemy is on the correct layer
         gameObject.layer = LayerMask.NameToLayer("Enemy");
+        
+        // Initialize pathfinding
+        nextPathUpdate = Time.time + pathUpdateInterval;
+        currentDestination = transform.position;
+        
         Debug.Log($"Enemy spawned with health: {health}, layer: {LayerMask.LayerToName(gameObject.layer)}");
     }
 
@@ -48,17 +98,191 @@ public class Enemy : MonoBehaviour
     {
         if (isDead) return;
 
-        // Move towards the player
-        if (agent != null && agent.isOnNavMesh)
+        // Check if grounded
+        CheckGrounded();
+
+        // Update pathfinding
+        if (Time.time >= nextPathUpdate && !isPathfinding)
         {
-            agent.SetDestination(player.position);
+            UpdatePathfinding();
+            nextPathUpdate = Time.time + pathUpdateInterval;
         }
 
+        // Calculate movement direction
+        CalculateMovementDirection();
+
         // Check if we can attack the player
-        float distanceToPlayer = Vector3.Distance(transform.position, player.position);
-        if (distanceToPlayer <= attackRange && Time.time >= lastAttackTime + attackCooldown)
+        if (player != null)
         {
-            Attack();
+            float distanceToPlayer = Vector3.Distance(transform.position, player.position);
+            if (distanceToPlayer <= attackRange && Time.time >= lastAttackTime + attackCooldown)
+            {
+                Attack();
+            }
+        }
+
+        // Check for nearby barrels
+        CheckForBarrels();
+    }
+
+    void FixedUpdate()
+    {
+        if (isDead) return;
+
+        // Apply movement force
+        if (moveDirection.magnitude > 0.1f)
+        {
+            float currentMoveSpeed = isGrounded ? moveSpeed : moveSpeed * airControl;
+            Vector3 moveForce = moveDirection * currentMoveSpeed;
+            rb.AddForce(moveForce, ForceMode.VelocityChange);
+        }
+
+        // Limit horizontal velocity
+        Vector3 horizontalVelocity = new Vector3(rb.velocity.x, 0, rb.velocity.z);
+        if (horizontalVelocity.magnitude > moveSpeed)
+        {
+            horizontalVelocity = horizontalVelocity.normalized * moveSpeed;
+            rb.velocity = new Vector3(horizontalVelocity.x, rb.velocity.y, horizontalVelocity.z);
+        }
+    }
+
+    void CheckGrounded()
+    {
+        // Cast a ray downward to check if grounded
+        RaycastHit hit;
+        Vector3 rayStart = transform.position + Vector3.up * 0.1f;
+        isGrounded = Physics.Raycast(rayStart, Vector3.down, out hit, groundCheckDistance + 0.1f, groundLayer);
+    }
+
+    void UpdatePathfinding()
+    {
+        if (player == null || isPathfinding) return;
+
+        // Only attempt pathfinding if we're grounded and on a NavMesh
+        if (!isGrounded)
+        {
+            // If not grounded, use direct movement
+            currentDestination = player.position;
+            hasValidPath = false;
+            return;
+        }
+
+        isPathfinding = true;
+        StartCoroutine(CalculatePath());
+    }
+
+    System.Collections.IEnumerator CalculatePath()
+    {
+        // Temporarily enable NavMeshAgent for pathfinding
+        pathfindingAgent.enabled = true;
+        
+        // Wait a frame to ensure the agent is properly initialized
+        yield return null;
+        
+        // Check if the agent is on a NavMesh before attempting pathfinding
+        if (!pathfindingAgent.isOnNavMesh)
+        {
+            Debug.LogWarning($"Enemy at {transform.position} is not on NavMesh, using direct movement");
+            pathfindingAgent.enabled = false;
+            isPathfinding = false;
+            
+            // Fallback to direct movement
+            currentDestination = player.position;
+            hasValidPath = false;
+            yield break;
+        }
+
+        // Attempt pathfinding
+        bool pathfindingSuccess = false;
+        try
+        {
+            pathfindingAgent.SetDestination(player.position);
+            pathfindingSuccess = true;
+        }
+        catch (System.Exception e)
+        {
+            Debug.LogWarning($"Pathfinding failed for enemy: {e.Message}");
+            pathfindingSuccess = false;
+        }
+
+        // Wait a frame for the path to be calculated (only if pathfinding was successful)
+        if (pathfindingSuccess)
+        {
+            yield return null;
+            
+            if (pathfindingAgent.hasPath && pathfindingAgent.remainingDistance > stoppingDistance)
+            {
+                // Get the next waypoint on the path
+                if (pathfindingAgent.path.corners.Length > 1)
+                {
+                    currentDestination = pathfindingAgent.path.corners[1];
+                    hasValidPath = true;
+                }
+                else
+                {
+                    currentDestination = player.position;
+                    hasValidPath = true;
+                }
+            }
+            else
+            {
+                // No valid path, move directly towards player
+                currentDestination = player.position;
+                hasValidPath = false;
+            }
+        }
+        else
+        {
+            // Fallback to direct movement
+            currentDestination = player.position;
+            hasValidPath = false;
+        }
+
+        // Always disable NavMeshAgent after pathfinding
+        pathfindingAgent.enabled = false;
+        isPathfinding = false;
+    }
+
+    void CalculateMovementDirection()
+    {
+        if (player == null) return;
+
+        if (hasValidPath)
+        {
+            // Use pathfinding destination
+            Vector3 directionToDestination = (currentDestination - transform.position).normalized;
+            directionToDestination.y = 0; // Keep movement horizontal
+            moveDirection = directionToDestination;
+        }
+        else
+        {
+            // Fallback to direct movement towards player
+            Vector3 directionToPlayer = (player.position - transform.position).normalized;
+            directionToPlayer.y = 0; // Keep movement horizontal
+            moveDirection = directionToPlayer;
+        }
+    }
+
+    void CheckForBarrels()
+    {
+        // Find all barrels within detection radius
+        Collider[] nearbyColliders = Physics.OverlapSphere(transform.position, barrelDetectionRadius);
+        
+        foreach (Collider col in nearbyColliders)
+        {
+            // Safer tag check
+            if (col.gameObject.CompareTag(barrelTag))
+            {
+                // Apply knockback force away from barrel
+                Vector3 knockbackDirection = (transform.position - col.transform.position).normalized;
+                knockbackDirection.y = 0.5f; // Add some upward force
+                
+                if (rb != null)
+                {
+                    rb.AddForce(knockbackDirection * barrelKnockbackForce, ForceMode.Impulse);
+                    Debug.Log($"Enemy knocked back by barrel with force: {barrelKnockbackForce}");
+                }
+            }
         }
     }
 
@@ -67,10 +291,13 @@ public class Enemy : MonoBehaviour
         lastAttackTime = Time.time;
         
         // Try to damage the player
-        PlayerHealth playerHealth = player.GetComponent<PlayerHealth>();
-        if (playerHealth != null)
+        if (player != null)
         {
-            playerHealth.TakeDamage(attackDamage);
+            PlayerHealth playerHealth = player.GetComponent<PlayerHealth>();
+            if (playerHealth != null)
+            {
+                playerHealth.TakeDamage(attackDamage);
+            }
         }
     }
 
@@ -102,10 +329,16 @@ public class Enemy : MonoBehaviour
         Debug.Log("Enemy dying");
         isDead = true;
         
-        // Disable the NavMeshAgent
-        if (agent != null)
+        // Disable physics
+        if (rb != null)
         {
-            agent.isStopped = true;
+            rb.isKinematic = true;
+        }
+
+        // Disable pathfinding
+        if (pathfindingAgent != null)
+        {
+            pathfindingAgent.enabled = false;
         }
 
         // Disable the collider
@@ -116,5 +349,22 @@ public class Enemy : MonoBehaviour
 
         // Destroy the enemy after a short delay
         Destroy(gameObject, 2f);
+    }
+
+    void OnDrawGizmosSelected()
+    {
+        // Draw barrel detection radius
+        Gizmos.color = Color.yellow;
+        Gizmos.DrawWireSphere(transform.position, barrelDetectionRadius);
+        
+        // Draw ground check ray
+        Gizmos.color = Color.green;
+        Vector3 rayStart = transform.position + Vector3.up * 0.1f;
+        Gizmos.DrawRay(rayStart, Vector3.down * (groundCheckDistance + 0.1f));
+        
+        // Draw current destination
+        Gizmos.color = Color.blue;
+        Gizmos.DrawWireSphere(currentDestination, 0.5f);
+        Gizmos.DrawLine(transform.position, currentDestination);
     }
 } 
