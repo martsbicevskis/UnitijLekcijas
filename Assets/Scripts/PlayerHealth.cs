@@ -202,6 +202,14 @@ public class PlayerHealth : MonoBehaviour
         }
     }
 
+    public void Heal(float amount)
+    {
+        if (isDead) return;
+        currentHealth += amount;
+        currentHealth = Mathf.Min(currentHealth, maxHealth);
+        UpdateHealthUI();
+    }
+
     void UpdateHealthUI()
     {
         if (healthBar != null)

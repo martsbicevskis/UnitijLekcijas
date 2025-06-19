@@ -11,6 +11,10 @@ public class Barrel : MonoBehaviour
     public bool useGravity = true;
     public bool isKinematic = false;
 
+    [Header("Audio")]
+    public AudioClip destroySound;
+    private AudioSource audioSource;
+
     void Start()
     {
         // Set up the barrel tag (create it if it doesn't exist)
@@ -35,6 +39,12 @@ public class Barrel : MonoBehaviour
         {
             BoxCollider boxCollider = gameObject.AddComponent<BoxCollider>();
             boxCollider.size = new Vector3(1f, 1f, 1f);
+        }
+        
+        audioSource = GetComponent<AudioSource>();
+        if (audioSource == null)
+        {
+            audioSource = gameObject.AddComponent<AudioSource>();
         }
         
         Debug.Log("Barrel initialized with physics");
@@ -72,6 +82,21 @@ public class Barrel : MonoBehaviour
                 knockbackDirection.y = 0.5f; // Add some upward force
                 enemyRb.AddForce(knockbackDirection * 3f, ForceMode.Impulse);
             }
+        }
+    }
+
+    void OnDestroy()
+    {
+        // Play destroy sound if assigned
+        if (destroySound != null && audioSource != null)
+        {
+            audioSource.PlayOneShot(destroySound, 1f);
+        }
+        // Heal the player by 3 HP when the barrel is destroyed
+        PlayerHealth playerHealth = FindObjectOfType<PlayerHealth>();
+        if (playerHealth != null)
+        {
+            playerHealth.Heal(3f);
         }
     }
 } 

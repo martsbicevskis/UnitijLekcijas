@@ -189,3 +189,4 @@ MonoBehaviour:
   angularDrag: 0.5
   useGravity: 1
   isKinematic: 0
+  destroySound: {fileID: 8300000, guid: 21c4a490b24ba2045bc815f7626a40ef, type: 3}
