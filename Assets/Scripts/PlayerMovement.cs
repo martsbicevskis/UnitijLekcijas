@@ -15,6 +15,12 @@ public class PlayerMovement : MonoBehaviour
     private Vector3 moveDirection = Vector3.zero;
     private bool isGrounded;
 
+    // Knockback fields
+    private Vector3 knockbackVelocity = Vector3.zero;
+    private float knockbackTimer = 0f;
+    private float knockbackDuration = 0.2f;
+    private float knockbackDecay = 10f;
+
     void Start()
     {
         // Get the CharacterController component
@@ -71,5 +77,19 @@ public class PlayerMovement : MonoBehaviour
         {
             moveDirection.y = -2f;
         }
+
+        // Apply knockback if active
+        if (knockbackTimer > 0f)
+        {
+            characterController.Move(knockbackVelocity * Time.deltaTime);
+            knockbackVelocity = Vector3.Lerp(knockbackVelocity, Vector3.zero, knockbackDecay * Time.deltaTime);
+            knockbackTimer -= Time.deltaTime;
+        }
+    }
+
+    public void ApplyKnockback(Vector3 direction, float force)
+    {
+        knockbackVelocity = direction.normalized * force;
+        knockbackTimer = knockbackDuration;
     }
 } 

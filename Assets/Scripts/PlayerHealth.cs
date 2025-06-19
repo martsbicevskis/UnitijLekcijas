@@ -76,12 +76,31 @@ public class PlayerHealth : MonoBehaviour
         }
     }
 
-    public void TakeDamage(float amount)
+    public void TakeDamage(float amount, Vector3? knockbackDirection = null, float knockbackForce = 5f)
     {
         currentHealth -= amount;
         currentHealth = Mathf.Max(currentHealth, 0);
         
         UpdateHealthUI();
+
+        // Apply knockback if direction is provided
+        if (knockbackDirection.HasValue)
+        {
+            PlayerMovement movement = GetComponent<PlayerMovement>();
+            if (movement != null)
+            {
+                movement.ApplyKnockback(knockbackDirection.Value, knockbackForce);
+                // Trigger camera shake using the playerCamera reference
+                if (movement.playerCamera != null)
+                {
+                    CameraShake shake = movement.playerCamera.GetComponent<CameraShake>();
+                    if (shake != null)
+                    {
+                        shake.Shake();
+                    }
+                }
+            }
+        }
 
         if (currentHealth <= 0)
         {

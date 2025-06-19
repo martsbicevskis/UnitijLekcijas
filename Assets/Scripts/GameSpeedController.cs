@@ -22,6 +22,12 @@ public class GameSpeedController : MonoBehaviour
     public KeyCode speedDownKey = KeyCode.Minus; // - key
     public KeyCode resetSpeedKey = KeyCode.R; // R key
 
+    [Header("Auto-Increase Settings")]
+    public bool autoIncrease = true;
+    public float increaseInterval = 10f; // seconds
+    public float autoIncreaseAmount = 0.1f;
+    private float increaseTimer = 0f;
+
     void Start()
     {
         // Initialize the speed
@@ -37,6 +43,17 @@ public class GameSpeedController : MonoBehaviour
     {
         // Handle keyboard input
         HandleKeyboardInput();
+
+        // Auto-increase game speed over time
+        if (autoIncrease && currentSpeed < maxSpeed)
+        {
+            increaseTimer += Time.unscaledDeltaTime;
+            if (increaseTimer >= increaseInterval)
+            {
+                increaseTimer = 0f;
+                SetGameSpeed(currentSpeed + autoIncreaseAmount);
+            }
+        }
     }
 
     void HandleKeyboardInput()

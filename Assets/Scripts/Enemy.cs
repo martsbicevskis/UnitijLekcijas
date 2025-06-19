@@ -38,6 +38,15 @@ public class Enemy : MonoBehaviour
     public Color midHealthColor = Color.yellow;
     public Color lowHealthColor = Color.red;
 
+    [Header("Player Knockback Settings")]
+    public float playerKnockbackForce = 7f;
+
+    [Header("Jump & Spin Settings")]
+    public float jumpForce = 7f;
+    public float spinForce = 360f;
+    public float minJumpSpinInterval = 2f;
+    public float maxJumpSpinInterval = 6f;
+
     private Transform player;
     private Rigidbody rb;
     private NavMeshAgent pathfindingAgent;
@@ -53,6 +62,8 @@ public class Enemy : MonoBehaviour
     private Vector3 lastHitDirection = Vector3.zero; // Store last hit direction
     private MeshRenderer meshRenderer;
     private Material enemyMaterial;
+    private bool doJumpSpin = false;
+    private float spinAmount = 0f;
 
     void Start()
     {
@@ -116,6 +127,7 @@ public class Enemy : MonoBehaviour
         UpdateColor();
         
         Debug.Log($"Enemy spawned with health: {health}, layer: {LayerMask.LayerToName(gameObject.layer)}");
+        StartCoroutine(JumpSpinRoutine());
     }
 
     void Update()
@@ -169,6 +181,14 @@ public class Enemy : MonoBehaviour
         {
             horizontalVelocity = horizontalVelocity.normalized * moveSpeed;
             rb.velocity = new Vector3(horizontalVelocity.x, rb.velocity.y, horizontalVelocity.z);
+        }
+
+        // Handle jump and spin
+        if (doJumpSpin && isGrounded)
+        {
+            rb.AddForce(Vector3.up * jumpForce, ForceMode.Impulse);
+            rb.AddTorque(Vector3.up * spinAmount, ForceMode.Impulse);
+            doJumpSpin = false;
         }
     }
 
@@ -322,7 +342,9 @@ public class Enemy : MonoBehaviour
             PlayerHealth playerHealth = player.GetComponent<PlayerHealth>();
             if (playerHealth != null)
             {
-                playerHealth.TakeDamage(attackDamage);
+                // Knockback direction: from enemy to player
+                Vector3 knockbackDir = (player.position - transform.position).normalized;
+                playerHealth.TakeDamage(attackDamage, knockbackDir, playerKnockbackForce);
             }
         }
     }
@@ -434,5 +456,19 @@ public class Enemy : MonoBehaviour
             lerpedColor = Color.Lerp(lowHealthColor, midHealthColor, t);
         }
         enemyMaterial.color = lerpedColor;
+    }
+
+    System.Collections.IEnumerator JumpSpinRoutine()
+    {
+        while (!isDead)
+        {
+            float wait = Random.Range(minJumpSpinInterval, maxJumpSpinInterval);
+            yield return new WaitForSeconds(wait);
+            if (!isDead && isGrounded)
+            {
+                doJumpSpin = true;
+                spinAmount = Random.Range(-spinForce, spinForce);
+            }
+        }
     }
 } 

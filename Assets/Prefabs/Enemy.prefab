@@ -94,6 +94,7 @@ MonoBehaviour:
   fullHealthColor: {r: 0, g: 0.92939377, b: 1, a: 1}
   midHealthColor: {r: 1, g: 0.88000447, b: 0.015686274, a: 1}
   lowHealthColor: {r: 1, g: 0, b: 0, a: 1}
+  playerKnockbackForce: 0
 --- !u!136 &4544527157290626019
 CapsuleCollider:
   m_ObjectHideFlags: 0
