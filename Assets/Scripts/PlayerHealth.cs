@@ -139,7 +139,7 @@ public class PlayerHealth : MonoBehaviour
                         {
                             audioSource = gameObject.AddComponent<AudioSource>();
                         }
-                        audioSource.PlayOneShot(stunAbilitySound, 2.0f);
+                        audioSource.PlayOneShot(stunAbilitySound, 0.5f);
                     }
                 }
                 else

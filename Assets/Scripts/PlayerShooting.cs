@@ -110,7 +110,7 @@ public class PlayerShooting : MonoBehaviour
         // Play shooting sound
         if (shootingSound != null)
         {
-            audioSource.PlayOneShot(shootingSound, 0.3f);
+            audioSource.PlayOneShot(shootingSound, 0.1f);
         }
 
         // Create a ray from the camera
