@@ -14,7 +14,7 @@ GameObject:
   - component: {fileID: 4544527157290626019}
   - component: {fileID: 4189146468753999129}
   m_Layer: 3
-  m_Name: Enemy
+  m_Name: EnemyOld
   m_TagString: Enemy
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -80,20 +80,11 @@ MonoBehaviour:
   groundLayer:
     serializedVersion: 2
     m_Bits: 1
-  airControl: 0.3
-  pathUpdateInterval: 0.5
-  stoppingDistance: 1
-  pathfindingHeight: 1
   barrelKnockbackForce: 5
   barrelDetectionRadius: 2
-  barrelTag: Barrel
   hitEffect: {fileID: 2217053005123940736, guid: e2bc1fdb484f5184d875d76e88008c37,
     type: 3}
   hitEffectDuration: 0.5
-  shotKnockbackForce: 10
-  fullHealthColor: {r: 0, g: 0.92939377, b: 1, a: 1}
-  midHealthColor: {r: 1, g: 0.88000447, b: 0.015686274, a: 1}
-  lowHealthColor: {r: 1, g: 0, b: 0, a: 1}
 --- !u!136 &4544527157290626019
 CapsuleCollider:
   m_ObjectHideFlags: 0

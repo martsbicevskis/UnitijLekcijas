@@ -113,7 +113,9 @@ public class PlayerShooting : MonoBehaviour
             if (enemy != null)
             {
                 Debug.Log($"Hit enemy! Applying {damage} damage");
-                enemy.TakeDamage(damage);
+                // Calculate knockback direction: from player to hit point
+                Vector3 knockbackDir = (hit.point - playerCamera.transform.position).normalized;
+                enemy.TakeDamage(damage, knockbackDir, null); // Use enemy's default knockback force
             }
             // Check if we hit a target
             else

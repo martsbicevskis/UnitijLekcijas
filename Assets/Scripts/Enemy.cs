@@ -30,6 +30,14 @@ public class Enemy : MonoBehaviour
     public GameObject hitEffect;
     public float hitEffectDuration = 0.5f;
 
+    [Header("Knockback Settings")]
+    public float shotKnockbackForce = 5f; // Knockback force when shot
+
+    [Header("Color Settings")]
+    public Color fullHealthColor = Color.green;
+    public Color midHealthColor = Color.yellow;
+    public Color lowHealthColor = Color.red;
+
     private Transform player;
     private Rigidbody rb;
     private NavMeshAgent pathfindingAgent;
@@ -42,6 +50,9 @@ public class Enemy : MonoBehaviour
     private Vector3 currentDestination;
     private bool hasValidPath = false;
     private bool isPathfinding = false;
+    private Vector3 lastHitDirection = Vector3.zero; // Store last hit direction
+    private MeshRenderer meshRenderer;
+    private Material enemyMaterial;
 
     void Start()
     {
@@ -91,6 +102,19 @@ public class Enemy : MonoBehaviour
         nextPathUpdate = Time.time + pathUpdateInterval;
         currentDestination = transform.position;
         
+        // Get the MeshRenderer (assume it's on a child called "Body" or on this GameObject)
+        meshRenderer = GetComponentInChildren<MeshRenderer>();
+        if (meshRenderer != null)
+        {
+            // Use a unique material instance for this enemy
+            enemyMaterial = meshRenderer.material;
+        }
+        else
+        {
+            Debug.LogWarning("Enemy MeshRenderer not found!");
+        }
+        UpdateColor();
+        
         Debug.Log($"Enemy spawned with health: {health}, layer: {LayerMask.LayerToName(gameObject.layer)}");
     }
 
@@ -123,6 +147,8 @@ public class Enemy : MonoBehaviour
 
         // Check for nearby barrels
         CheckForBarrels();
+
+        UpdateColor();
     }
 
     void FixedUpdate()
@@ -301,10 +327,29 @@ public class Enemy : MonoBehaviour
         }
     }
 
-    public void TakeDamage(float amount)
+    // Call this to apply knockback when shot
+    public void ApplyKnockback(Vector3 direction, float force)
+    {
+        if (rb != null && !isDead)
+        {
+            Vector3 knockback = direction.normalized;
+            knockback.y = 0.3f; // Add a bit of upward force
+            rb.AddForce(knockback * force, ForceMode.Impulse);
+            lastHitDirection = knockback;
+            Debug.Log($"Enemy knocked back with force {force} in direction {knockback}");
+        }
+    }
+
+    public void TakeDamage(float amount, Vector3? hitDirection = null, float? knockbackForce = null)
     {
         Debug.Log($"Enemy taking damage: {amount}. Current health: {health}");
         health -= amount;
+        
+        // Apply knockback if direction is provided
+        if (hitDirection.HasValue)
+        {
+            ApplyKnockback(hitDirection.Value, knockbackForce ?? shotKnockbackForce);
+        }
         
         // Create hit effect
         if (hitEffect != null)
@@ -322,6 +367,8 @@ public class Enemy : MonoBehaviour
         {
             Debug.Log($"Enemy health after damage: {health}");
         }
+
+        UpdateColor();
     }
 
     void Die()
@@ -366,5 +413,26 @@ public class Enemy : MonoBehaviour
         Gizmos.color = Color.blue;
         Gizmos.DrawWireSphere(currentDestination, 0.5f);
         Gizmos.DrawLine(transform.position, currentDestination);
+    }
+
+    // Interpolate color based on health
+    void UpdateColor()
+    {
+        if (enemyMaterial == null) return;
+        float healthPercent = Mathf.Clamp01(health / 100f);
+        Color lerpedColor;
+        if (healthPercent > 0.5f)
+        {
+            // Green to yellow
+            float t = (healthPercent - 0.5f) * 2f;
+            lerpedColor = Color.Lerp(midHealthColor, fullHealthColor, t);
+        }
+        else
+        {
+            // Red to yellow
+            float t = healthPercent * 2f;
+            lerpedColor = Color.Lerp(lowHealthColor, midHealthColor, t);
+        }
+        enemyMaterial.color = lerpedColor;
     }
 } 

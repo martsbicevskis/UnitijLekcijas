@@ -26,7 +26,7 @@ public class GroundManager : MonoBehaviour
         CreateGround();
     }
 
-    void CreateGround()
+    void CreateGround() 
     {
         // Create a new material
         groundMaterial = new Material(Shader.Find("Universal Render Pipeline/Lit"));
