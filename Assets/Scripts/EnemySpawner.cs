@@ -5,7 +5,7 @@ public class EnemySpawner : MonoBehaviour
     [Header("Spawn Settings")]
     public GameObject enemyPrefab;
     public float spawnInterval = 5f;
-    public float spawnDistance = 20f;
+    public float spawnDistance = 35f;
     public int maxEnemies = 10;
     public float spawnHeight = 10f; // Height above ground to spawn enemies
     public float spawnHeightVariation = 3f; // Random variation in spawn height
@@ -50,6 +50,7 @@ public class EnemySpawner : MonoBehaviour
 
         // Spawn the enemy at the calculated position
         GameObject enemy = Instantiate(enemyPrefab, spawnPosition, Quaternion.identity);
+        enemy.transform.localScale = Vector3.one * 1.5f;
         
         // Set the enemy tag and layer
         enemy.tag = "Enemy";

@@ -10,12 +10,15 @@ public class PlayerHealth : MonoBehaviour
     public float currentHealth;
     public Image healthBar;
     public TextMeshProUGUI healthText;
+    public Image cooldownBar;
 
     [Header("Death Screen")]
     public TextMeshProUGUI deathText;
     public float fadeInDuration = 1f;
     private float fadeTimer = 0f;
     private bool isDead = false;
+    private float stunCooldown = 10f;
+    private float lastStunTime = -100f;
 
     void Start()
     {
@@ -83,13 +86,40 @@ public class PlayerHealth : MonoBehaviour
         }
         else
         {
-            // Stun all enemies for 3 seconds when Q is pressed
+            // Stun all enemies for 3 seconds when Q is pressed, with cooldown
             if (Input.GetKeyDown(KeyCode.Q))
             {
-                Enemy[] enemies = FindObjectsOfType<Enemy>();
-                foreach (Enemy enemy in enemies)
+                if (Time.time >= lastStunTime + stunCooldown)
                 {
-                    enemy.Stun(3f);
+                    Enemy[] enemies = FindObjectsOfType<Enemy>();
+                    foreach (Enemy enemy in enemies)
+                    {
+                        enemy.Stun(3f);
+                    }
+                    lastStunTime = Time.time;
+                }
+                else
+                {
+                    float timeLeft = (lastStunTime + stunCooldown) - Time.time;
+                    Debug.Log($"Stun ability is on cooldown. {timeLeft:F1} seconds left.");
+                }
+            }
+            // Update cooldown bar
+            if (cooldownBar != null)
+            {
+                float cooldown = Mathf.Clamp01((Time.time - lastStunTime) / stunCooldown);
+                cooldownBar.rectTransform.localScale = new Vector3(cooldown, 1, 1);
+                Color readyColor = new Color(0.5f, 0.8f, 1f, 1f); // Light blue
+                Color cooldownColor = new Color(0.2f, 0.3f, 0.5f, 1f); // Dark blue/gray
+                if (cooldown >= 1f)
+                {
+                    cooldownBar.color = readyColor;
+                    Debug.Log($"Cooldown bar color set to READY: {readyColor}");
+                }
+                else
+                {
+                    cooldownBar.color = cooldownColor;
+                    Debug.Log($"Cooldown bar color set to COOLDOWN: {cooldownColor}");
                 }
             }
         }
