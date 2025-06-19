@@ -20,10 +20,21 @@ public class PlayerHealth : MonoBehaviour
     private float stunCooldown = 10f;
     private float lastStunTime = -100f;
 
+    public TextMeshProUGUI respawnText;
+    public TextMeshProUGUI scoreText;
+    private GameSpeedController gameSpeedController;
+
     void Start()
     {
         currentHealth = maxHealth;
         UpdateHealthUI();
+
+        // Hide respawn and score text at start
+        if (respawnText != null) respawnText.gameObject.SetActive(false);
+        if (scoreText != null) scoreText.gameObject.SetActive(false);
+
+        // Find GameSpeedController in the scene
+        gameSpeedController = FindObjectOfType<GameSpeedController>();
 
         // Create death text if it doesn't exist
         if (deathText == null)
@@ -193,6 +204,43 @@ public class PlayerHealth : MonoBehaviour
         if (deathText != null)
         {
             deathText.gameObject.SetActive(true);
+            // Center deathText
+            RectTransform rect = deathText.GetComponent<RectTransform>();
+            rect.anchorMin = new Vector2(0.5f, 0.5f);
+            rect.anchorMax = new Vector2(0.5f, 0.5f);
+            rect.anchoredPosition = Vector2.zero;
+            rect.sizeDelta = new Vector2(400, 100);
+            deathText.alignment = TMPro.TextAlignmentOptions.Center;
+        }
+
+        // Show respawn and score text
+        if (respawnText != null)
+        {
+            respawnText.gameObject.SetActive(true);
+            // Center respawnText
+            RectTransform rect = respawnText.GetComponent<RectTransform>();
+            rect.anchorMin = new Vector2(0.5f, 0.5f);
+            rect.anchorMax = new Vector2(0.5f, 0.5f);
+            rect.anchoredPosition = new Vector2(0, -40); // Slightly below center
+            rect.sizeDelta = new Vector2(400, 100);
+            respawnText.alignment = TMPro.TextAlignmentOptions.Center;
+        }
+        if (scoreText != null)
+        {
+            scoreText.gameObject.SetActive(true);
+            float score = 0f;
+            if (gameSpeedController != null)
+            {
+                score = gameSpeedController.currentSpeed * 100f;
+            }
+            scoreText.text = $"Score: {score:F0}";
+            // Center scoreText
+            RectTransform rect = scoreText.GetComponent<RectTransform>();
+            rect.anchorMin = new Vector2(0.5f, 0.5f);
+            rect.anchorMax = new Vector2(0.5f, 0.5f);
+            rect.anchoredPosition = new Vector2(0, -60); // Slightly below center
+            rect.sizeDelta = new Vector2(400, 100);
+            scoreText.alignment = TMPro.TextAlignmentOptions.Center;
         }
 
         Debug.Log("Player died!");

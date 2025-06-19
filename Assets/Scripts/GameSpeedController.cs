@@ -5,7 +5,7 @@ using TMPro;
 public class GameSpeedController : MonoBehaviour
 {
     [Header("Speed Settings")]
-    public float currentSpeed = 1f;
+    public float currentSpeed = 0.5f;
     public float minSpeed = 0.1f;
     public float maxSpeed = 5f;
     public float speedStep = 0.5f;
