@@ -47,6 +47,14 @@ public class Enemy : MonoBehaviour
     public float minJumpSpinInterval = 2f;
     public float maxJumpSpinInterval = 6f;
 
+    [Header("Audio")]
+    public AudioClip ghostAttackSound;
+    public AudioClip ghostIdleSound;
+    public AudioClip ghostIdleSound2;
+    public AudioClip ghostIdleSound3;
+    private AudioClip chosenIdleSound;
+    private Coroutine idleSoundCoroutine;
+
     private Transform player;
     private Rigidbody rb;
     private NavMeshAgent pathfindingAgent;
@@ -68,11 +76,22 @@ public class Enemy : MonoBehaviour
     private float stunTimer = 0f;
     public GameObject stunEffectPrefab; // Assign in inspector if you want a visual effect
     private GameObject activeStunEffect;
+    private AudioSource audioSource;
+    private PlayerHealth playerHealth;
+
+    // Global cooldown for idle sounds
+    private static float lastGlobalIdleSoundTime = -100f;
+    private static float globalIdleSoundCooldown = 1.5f;
 
     void Start()
     {
         // Find the player
-        player = GameObject.FindGameObjectWithTag("Player").transform;
+        GameObject playerObj = GameObject.FindGameObjectWithTag("Player");
+        if (playerObj != null)
+        {
+            player = playerObj.transform;
+            playerHealth = playerObj.GetComponent<PlayerHealth>();
+        }
         
         // Set up Rigidbody for physics
         rb = GetComponent<Rigidbody>();
@@ -128,10 +147,28 @@ public class Enemy : MonoBehaviour
         {
             Debug.LogWarning("Enemy MeshRenderer not found!");
         }
-        UpdateColor();
         
         Debug.Log($"Enemy spawned with health: {health}, layer: {LayerMask.LayerToName(gameObject.layer)}");
         StartCoroutine(JumpSpinRoutine());
+
+        audioSource = GetComponent<AudioSource>();
+        if (audioSource == null)
+        {
+            audioSource = gameObject.AddComponent<AudioSource>();
+        }
+        // Choose a random idle sound
+        AudioClip[] idleSounds = new AudioClip[] { ghostIdleSound, ghostIdleSound2, ghostIdleSound3 };
+        var validIdleSounds = System.Array.FindAll(idleSounds, s => s != null);
+        if (validIdleSounds.Length > 0)
+        {
+            chosenIdleSound = validIdleSounds[Random.Range(0, validIdleSounds.Length)];
+        }
+        else
+        {
+            chosenIdleSound = null;
+        }
+        // Start idle sound coroutine if any idle sound is assigned
+        // (Removed: idle sounds now play on jump/spin)
     }
 
     void Update()
@@ -173,8 +210,6 @@ public class Enemy : MonoBehaviour
 
         // Check for nearby barrels
         CheckForBarrels();
-
-        UpdateColor();
     }
 
     void FixedUpdate()
@@ -350,6 +385,11 @@ public class Enemy : MonoBehaviour
     void Attack()
     {
         lastAttackTime = Time.time;
+        // Play attack sound only if player is not dead
+        if (ghostAttackSound != null && playerHealth != null && !playerHealth.isDead)
+        {
+            audioSource.PlayOneShot(ghostAttackSound, 0.7f);
+        }
         
         // Try to damage the player
         if (player != null)
@@ -404,14 +444,16 @@ public class Enemy : MonoBehaviour
         {
             Debug.Log($"Enemy health after damage: {health}");
         }
-
-        UpdateColor();
     }
 
     void Die()
     {
         Debug.Log("Enemy dying");
         isDead = true;
+        if (audioSource != null && audioSource.isPlaying)
+        {
+            audioSource.Stop();
+        }
         
         // Disable physics
         if (rb != null)
@@ -452,29 +494,10 @@ public class Enemy : MonoBehaviour
         Gizmos.DrawLine(transform.position, currentDestination);
     }
 
-    // Interpolate color based on health
-    void UpdateColor()
-    {
-        if (enemyMaterial == null) return;
-        float healthPercent = Mathf.Clamp01(health / 100f);
-        Color lerpedColor;
-        if (healthPercent > 0.5f)
-        {
-            // Green to yellow
-            float t = (healthPercent - 0.5f) * 2f;
-            lerpedColor = Color.Lerp(midHealthColor, fullHealthColor, t);
-        }
-        else
-        {
-            // Red to yellow
-            float t = healthPercent * 2f;
-            lerpedColor = Color.Lerp(lowHealthColor, midHealthColor, t);
-        }
-        enemyMaterial.color = lerpedColor;
-    }
-
     System.Collections.IEnumerator JumpSpinRoutine()
     {
+        AudioClip[] idleSounds = new AudioClip[] { ghostIdleSound, ghostIdleSound2, ghostIdleSound3 };
+        var validIdleSounds = System.Array.FindAll(idleSounds, s => s != null);
         while (!isDead)
         {
             float wait = Random.Range(minJumpSpinInterval, maxJumpSpinInterval);
@@ -483,6 +506,16 @@ public class Enemy : MonoBehaviour
             {
                 doJumpSpin = true;
                 spinAmount = Random.Range(-spinForce, spinForce);
+                // Play a random idle sound when jumping/spinning, only if player is not dead
+                if (validIdleSounds.Length > 0 && playerHealth != null && !playerHealth.isDead)
+                {
+                    if (Time.time > lastGlobalIdleSoundTime + globalIdleSoundCooldown)
+                    {
+                        AudioClip clip = validIdleSounds[Random.Range(0, validIdleSounds.Length)];
+                        audioSource.PlayOneShot(clip, 0.15f);
+                        lastGlobalIdleSoundTime = Time.time;
+                    }
+                }
             }
         }
     }
@@ -495,6 +528,21 @@ public class Enemy : MonoBehaviour
         if (stunEffectPrefab != null && activeStunEffect == null)
         {
             activeStunEffect = Instantiate(stunEffectPrefab, transform.position + Vector3.up, Quaternion.identity, transform);
+        }
+    }
+
+    // Coroutine to play idle sounds at random intervals
+    private System.Collections.IEnumerator PlayIdleSoundsRandomly(AudioClip[] idleSounds)
+    {
+        while (!isDead)
+        {
+            float wait = Random.Range(4f, 8f);
+            yield return new WaitForSeconds(wait);
+            if (!isDead && idleSounds.Length > 0)
+            {
+                AudioClip clip = idleSounds[Random.Range(0, idleSounds.Length)];
+                audioSource.PlayOneShot(clip, 0.4f);
+            }
         }
     }
 } 

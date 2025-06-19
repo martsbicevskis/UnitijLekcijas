@@ -264,5 +264,9 @@ MonoBehaviour:
   spinForce: 180
   minJumpSpinInterval: 0.5
   maxJumpSpinInterval: 1
+  ghostAttackSound: {fileID: 8300000, guid: b7b5a6156961bac44a67504d42ce6fcf, type: 3}
+  ghostIdleSound: {fileID: 8300000, guid: b0e62ed71b1538648b719821f4f63b4c, type: 3}
+  ghostIdleSound2: {fileID: 8300000, guid: b0e62ed71b1538648b719821f4f63b4c, type: 3}
+  ghostIdleSound3: {fileID: 8300000, guid: b0e62ed71b1538648b719821f4f63b4c, type: 3}
   stunEffectPrefab: {fileID: 2217053005123940736, guid: 218bd5eb19acc2d42a74627ff355e086,
     type: 3}

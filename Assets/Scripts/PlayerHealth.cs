@@ -16,13 +16,21 @@ public class PlayerHealth : MonoBehaviour
     public TextMeshProUGUI deathText;
     public float fadeInDuration = 1f;
     private float fadeTimer = 0f;
-    private bool isDead = false;
+    public bool isDead = false;
     private float stunCooldown = 10f;
     private float lastStunTime = -100f;
 
     public TextMeshProUGUI respawnText;
     public TextMeshProUGUI scoreText;
     private GameSpeedController gameSpeedController;
+
+    public AudioClip backgroundMusic;
+    private AudioSource backgroundAudioSource;
+
+    public AudioClip playerDyingSound;
+    private bool hasPlayedDyingSound = false;
+
+    public AudioClip stunAbilitySound;
 
     void Start()
     {
@@ -45,6 +53,21 @@ public class PlayerHealth : MonoBehaviour
         {
             // Hide death text initially
             deathText.color = new Color(1, 1, 1, 0);
+        }
+
+        // Play background music
+        if (backgroundMusic != null)
+        {
+            backgroundAudioSource = GetComponent<AudioSource>();
+            if (backgroundAudioSource == null)
+            {
+                backgroundAudioSource = gameObject.AddComponent<AudioSource>();
+            }
+            backgroundAudioSource.clip = backgroundMusic;
+            backgroundAudioSource.loop = true;
+            backgroundAudioSource.playOnAwake = true;
+            backgroundAudioSource.volume = 0.5f;
+            backgroundAudioSource.Play();
         }
     }
 
@@ -108,6 +131,16 @@ public class PlayerHealth : MonoBehaviour
                         enemy.Stun(3f);
                     }
                     lastStunTime = Time.time;
+                    // Play stun ability sound
+                    if (stunAbilitySound != null)
+                    {
+                        AudioSource audioSource = GetComponent<AudioSource>();
+                        if (audioSource == null)
+                        {
+                            audioSource = gameObject.AddComponent<AudioSource>();
+                        }
+                        audioSource.PlayOneShot(stunAbilitySound, 2.0f);
+                    }
                 }
                 else
                 {
@@ -138,6 +171,7 @@ public class PlayerHealth : MonoBehaviour
 
     public void TakeDamage(float amount, Vector3? knockbackDirection = null, float knockbackForce = 5f)
     {
+        if (isDead) return;
         currentHealth -= amount;
         currentHealth = Mathf.Max(currentHealth, 0);
         
@@ -174,6 +208,23 @@ public class PlayerHealth : MonoBehaviour
         {
             float healthPercentage = currentHealth / maxHealth;
             healthBar.rectTransform.localScale = new Vector3(healthPercentage, 1, 1);
+
+            // Interpolate color: green (full) to yellow (mid) to red (low)
+            Color full = Color.green;
+            Color mid = Color.yellow;
+            Color low = Color.red;
+            Color lerpedColor;
+            if (healthPercentage > 0.5f)
+            {
+                float t = (healthPercentage - 0.5f) * 2f;
+                lerpedColor = Color.Lerp(mid, full, t);
+            }
+            else
+            {
+                float t = healthPercentage * 2f;
+                lerpedColor = Color.Lerp(low, mid, t);
+            }
+            healthBar.color = lerpedColor;
         }
 
         if (healthText != null)
@@ -241,6 +292,18 @@ public class PlayerHealth : MonoBehaviour
             rect.anchoredPosition = new Vector2(0, -60); // Slightly below center
             rect.sizeDelta = new Vector2(400, 100);
             scoreText.alignment = TMPro.TextAlignmentOptions.Center;
+        }
+
+        // Play dying sound only once
+        if (!hasPlayedDyingSound && playerDyingSound != null)
+        {
+            AudioSource audioSource = GetComponent<AudioSource>();
+            if (audioSource == null)
+            {
+                audioSource = gameObject.AddComponent<AudioSource>();
+            }
+            audioSource.PlayOneShot(playerDyingSound, 1f);
+            hasPlayedDyingSound = true;
         }
 
         Debug.Log("Player died!");

@@ -10,6 +10,10 @@ public class PlayerMovement : MonoBehaviour
     [Header("References")]
     public Camera playerCamera; // Reference to the player's camera
 
+    [Header("Audio")]
+    public AudioClip walkSound;
+    public AudioClip jumpSound;
+
     private CharacterController characterController;
     private float verticalRotation = 0f;
     private Vector3 moveDirection = Vector3.zero;
@@ -20,6 +24,10 @@ public class PlayerMovement : MonoBehaviour
     private float knockbackTimer = 0f;
     private float knockbackDuration = 0.2f;
     private float knockbackDecay = 10f;
+
+    private AudioSource audioSource;
+    private float walkStepCooldown = 0.4f;
+    private float lastWalkStepTime = 0f;
 
     void Start()
     {
@@ -35,6 +43,12 @@ public class PlayerMovement : MonoBehaviour
         // Lock and hide the cursor
         Cursor.lockState = CursorLockMode.Locked;
         Cursor.visible = false;
+
+        audioSource = GetComponent<AudioSource>();
+        if (audioSource == null)
+        {
+            audioSource = gameObject.AddComponent<AudioSource>();
+        }
     }
 
     void Update()
@@ -61,10 +75,24 @@ public class PlayerMovement : MonoBehaviour
         // Apply movement
         characterController.Move(move * moveSpeed * Time.deltaTime);
 
+        // Play walking sound if moving and grounded
+        if (isGrounded && (Mathf.Abs(moveX) > 0.1f || Mathf.Abs(moveZ) > 0.1f))
+        {
+            if (walkSound != null && Time.time > lastWalkStepTime + walkStepCooldown)
+            {
+                audioSource.PlayOneShot(walkSound, 0.5f);
+                lastWalkStepTime = Time.time;
+            }
+        }
+
         // Handle jumping
         if (Input.GetButtonDown("Jump") && isGrounded)
         {
             moveDirection.y = jumpForce;
+            if (jumpSound != null)
+            {
+                audioSource.PlayOneShot(jumpSound, 0.7f);
+            }
         }
 
         // Apply gravity

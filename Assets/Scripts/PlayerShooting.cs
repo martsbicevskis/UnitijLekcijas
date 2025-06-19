@@ -21,6 +21,10 @@ public class PlayerShooting : MonoBehaviour
     private GameObject impactEffect;
     private WeaponController weaponController;
 
+    [Header("Audio")]
+    public AudioClip shootingSound;
+    private AudioSource audioSource;
+
     private float nextTimeToFire = 0f;
 
     void Start()
@@ -41,6 +45,12 @@ public class PlayerShooting : MonoBehaviour
         if (weaponController == null)
         {
             weaponController = gameObject.AddComponent<WeaponController>();
+        }
+
+        audioSource = GetComponent<AudioSource>();
+        if (audioSource == null)
+        {
+            audioSource = gameObject.AddComponent<AudioSource>();
         }
     }
 
@@ -96,6 +106,12 @@ public class PlayerShooting : MonoBehaviour
         // Play muzzle flash effect
         muzzleFlash.Play();
         Debug.Log("Shot fired!");
+
+        // Play shooting sound
+        if (shootingSound != null)
+        {
+            audioSource.PlayOneShot(shootingSound, 0.3f);
+        }
 
         // Create a ray from the camera
         RaycastHit hit;

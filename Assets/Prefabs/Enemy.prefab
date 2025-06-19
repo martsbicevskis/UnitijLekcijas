@@ -34,7 +34,7 @@ Transform:
   m_Children:
   - {fileID: 2363805315612037208}
   m_Father: {fileID: 0}
-  m_RootOrder: 9
+  m_RootOrder: 0
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!195 &5276278512663036410
 NavMeshAgent:
@@ -95,6 +95,15 @@ MonoBehaviour:
   midHealthColor: {r: 1, g: 0.88000447, b: 0.015686274, a: 1}
   lowHealthColor: {r: 1, g: 0, b: 0, a: 1}
   playerKnockbackForce: 0
+  jumpForce: 7
+  spinForce: 360
+  minJumpSpinInterval: 2
+  maxJumpSpinInterval: 6
+  ghostAttackSound: {fileID: 0}
+  ghostIdleSound: {fileID: 8300000, guid: 56703418e3aed4c47a5f6622816b8e41, type: 3}
+  ghostIdleSound2: {fileID: 0}
+  ghostIdleSound3: {fileID: 0}
+  stunEffectPrefab: {fileID: 0}
 --- !u!136 &4544527157290626019
 CapsuleCollider:
   m_ObjectHideFlags: 0
