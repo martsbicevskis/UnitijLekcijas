@@ -1,6 +1,7 @@
 using UnityEngine;
 using UnityEngine.UI;
 using TMPro;
+using UnityEngine.SceneManagement;
 
 public class PlayerHealth : MonoBehaviour
 {
@@ -73,6 +74,24 @@ public class PlayerHealth : MonoBehaviour
             fadeTimer += Time.deltaTime;
             float alpha = Mathf.Clamp01(fadeTimer / fadeInDuration);
             deathText.color = new Color(1, 0, 0, alpha);
+
+            // Allow restart by pressing 'R'
+            if (Input.GetKeyDown(KeyCode.R))
+            {
+                SceneManager.LoadScene(SceneManager.GetActiveScene().buildIndex);
+            }
+        }
+        else
+        {
+            // Stun all enemies for 3 seconds when Q is pressed
+            if (Input.GetKeyDown(KeyCode.Q))
+            {
+                Enemy[] enemies = FindObjectsOfType<Enemy>();
+                foreach (Enemy enemy in enemies)
+                {
+                    enemy.Stun(3f);
+                }
+            }
         }
     }
 

@@ -64,6 +64,10 @@ public class Enemy : MonoBehaviour
     private Material enemyMaterial;
     private bool doJumpSpin = false;
     private float spinAmount = 0f;
+    private bool isStunned = false;
+    private float stunTimer = 0f;
+    public GameObject stunEffectPrefab; // Assign in inspector if you want a visual effect
+    private GameObject activeStunEffect;
 
     void Start()
     {
@@ -133,6 +137,16 @@ public class Enemy : MonoBehaviour
     void Update()
     {
         if (isDead) return;
+        if (isStunned)
+        {
+            stunTimer -= Time.deltaTime;
+            if (stunTimer <= 0f)
+            {
+                isStunned = false;
+                if (activeStunEffect != null) Destroy(activeStunEffect);
+            }
+            return;
+        }
 
         // Check if grounded
         CheckGrounded();
@@ -166,6 +180,7 @@ public class Enemy : MonoBehaviour
     void FixedUpdate()
     {
         if (isDead) return;
+        if (isStunned) return;
 
         // Apply movement force
         if (moveDirection.magnitude > 0.1f)
@@ -469,6 +484,17 @@ public class Enemy : MonoBehaviour
                 doJumpSpin = true;
                 spinAmount = Random.Range(-spinForce, spinForce);
             }
+        }
+    }
+
+    public void Stun(float duration)
+    {
+        if (isDead) return;
+        isStunned = true;
+        stunTimer = duration;
+        if (stunEffectPrefab != null && activeStunEffect == null)
+        {
+            activeStunEffect = Instantiate(stunEffectPrefab, transform.position + Vector3.up, Quaternion.identity, transform);
         }
     }
 } 

@@ -255,7 +255,14 @@ MonoBehaviour:
   hitEffect: {fileID: 2217053005123940736, guid: e2bc1fdb484f5184d875d76e88008c37,
     type: 3}
   hitEffectDuration: 0.5
-  shotKnockbackForce: 5
+  shotKnockbackForce: 10
   fullHealthColor: {r: 0, g: 1, b: 0, a: 1}
   midHealthColor: {r: 1, g: 0.92156863, b: 0.015686275, a: 1}
   lowHealthColor: {r: 1, g: 0, b: 0, a: 1}
+  playerKnockbackForce: 50
+  jumpForce: 7
+  spinForce: 180
+  minJumpSpinInterval: 0.5
+  maxJumpSpinInterval: 1
+  stunEffectPrefab: {fileID: 2217053005123940736, guid: 218bd5eb19acc2d42a74627ff355e086,
+    type: 3}
