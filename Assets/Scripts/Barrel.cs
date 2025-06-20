@@ -1,26 +1,28 @@
 using UnityEngine;
 
+// This script defines the behavior of a barrel, including physics, interactions, and destruction.
 public class Barrel : MonoBehaviour
 {
     [Header("Barrel Settings")]
-    public float mass = 10f;
-    public float drag = 0.5f;
-    public float angularDrag = 0.5f;
+    public float mass = 10f; // Mass of the barrel's Rigidbody.
+    public float drag = 0.5f; // Air resistance of the barrel.
+    public float angularDrag = 0.5f; // Rotational air resistance.
     
     [Header("Physics")]
-    public bool useGravity = true;
-    public bool isKinematic = false;
+    public bool useGravity = true; // Whether the barrel is affected by gravity.
+    public bool isKinematic = false; // Whether the barrel is controlled by physics or script.
 
     [Header("Audio")]
-    public AudioClip destroySound;
-    private AudioSource audioSource;
+    public AudioClip destroySound; // Sound to play when the barrel is destroyed.
+    private AudioSource audioSource; // Component to play audio.
 
+    // Called when the script instance is being loaded.
     void Start()
     {
-        // Set up the barrel tag (create it if it doesn't exist)
+        // Set up the barrel's tag for identification.
         SetupBarrelTag();
         
-        // Set up Rigidbody
+        // Configure the Rigidbody component for physics simulation.
         Rigidbody rb = GetComponent<Rigidbody>();
         if (rb == null)
         {
@@ -33,7 +35,7 @@ public class Barrel : MonoBehaviour
         rb.useGravity = useGravity;
         rb.isKinematic = isKinematic;
         
-        // Add collider if it doesn't exist
+        // Ensure the barrel has a collider for physical interactions.
         Collider col = GetComponent<Collider>();
         if (col == null)
         {
@@ -41,6 +43,7 @@ public class Barrel : MonoBehaviour
             boxCollider.size = new Vector3(1f, 1f, 1f);
         }
         
+        // Set up the AudioSource for playing sounds.
         audioSource = GetComponent<AudioSource>();
         if (audioSource == null)
         {
@@ -50,49 +53,51 @@ public class Barrel : MonoBehaviour
         Debug.Log("Barrel initialized with physics");
     }
 
+    // Ensures the "Barrel" tag exists and is assigned to this GameObject.
     void SetupBarrelTag()
     {
-        // Try to set the Barrel tag
+        // Attempt to assign the "Barrel" tag.
         try
         {
             gameObject.tag = "Barrel";
         }
         catch (System.ArgumentException)
         {
-            // Tag doesn't exist, create it
+            // If the tag doesn't exist, log a warning and default to "Untagged".
             Debug.LogWarning("Barrel tag doesn't exist. Please create it in Unity's Tag Manager (Edit > Project Settings > Tags and Layers)");
-            
-            // Set to untagged for now
             gameObject.tag = "Untagged";
         }
     }
 
+    // Called when this collider/rigidbody has begun touching another rigidbody/collider.
     void OnCollisionEnter(Collision collision)
     {
-        // Check if colliding with an enemy
+        // Check if the barrel collided with an object tagged as "Enemy".
         if (collision.gameObject.CompareTag("Enemy"))
         {
             Debug.Log("Barrel collided with enemy!");
             
-            // Apply force to the enemy
+            // Apply a knockback force to the enemy.
             Rigidbody enemyRb = collision.gameObject.GetComponent<Rigidbody>();
             if (enemyRb != null)
             {
                 Vector3 knockbackDirection = (collision.gameObject.transform.position - transform.position).normalized;
-                knockbackDirection.y = 0.5f; // Add some upward force
+                knockbackDirection.y = 0.5f; // Add some upward force to the knockback.
                 enemyRb.AddForce(knockbackDirection * 3f, ForceMode.Impulse);
             }
         }
     }
 
+    // Called when the MonoBehaviour will be destroyed.
     void OnDestroy()
     {
-        // Play destroy sound if assigned
+        // Play the destruction sound if available.
         if (destroySound != null && audioSource != null)
         {
             audioSource.PlayOneShot(destroySound, 1f);
         }
-        // Heal the player by 3 HP when the barrel is destroyed
+
+        // Heal the player for 3 HP upon destruction.
         PlayerHealth playerHealth = FindObjectOfType<PlayerHealth>();
         if (playerHealth != null)
         {

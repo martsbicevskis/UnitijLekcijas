@@ -1,91 +1,94 @@
 using UnityEngine;
 using UnityEngine.AI;
 
+// This script defines the behavior of an enemy, including movement, pathfinding, attacking, and health management.
 public class Enemy : MonoBehaviour
 {
     [Header("Enemy Settings")]
-    public float health = 100f;
-    public float moveSpeed = 3.5f;
-    public float attackRange = 2f;
-    public float attackDamage = 10f;
-    public float attackCooldown = 1f;
+    public float health = 100f; // The current health of the enemy.
+    public float moveSpeed = 3.5f; // The movement speed of the enemy.
+    public float attackRange = 2f; // The range within which the enemy can attack the player.
+    public float attackDamage = 10f; // The amount of damage the enemy deals to the player.
+    public float attackCooldown = 1f; // The time between enemy attacks.
 
     [Header("Physics Settings")]
-    public float gravity = 9.81f;
-    public float groundCheckDistance = 0.1f;
-    public LayerMask groundLayer = 1; // Default layer
-    public float airControl = 0.3f; // How much control enemy has while in air
+    public float gravity = 9.81f; // The force of gravity applied to the enemy.
+    public float groundCheckDistance = 0.1f; // The distance to check for ground beneath the enemy.
+    public LayerMask groundLayer = 1; // The layer considered as ground.
+    public float airControl = 0.3f; // The amount of control the enemy has while in the air.
 
     [Header("Pathfinding Settings")]
-    public float pathUpdateInterval = 0.5f;
-    public float stoppingDistance = 1f;
-    public float pathfindingHeight = 1f; // Height to check for pathfinding
+    public float pathUpdateInterval = 0.5f; // How often the enemy updates its path to the player.
+    public float stoppingDistance = 1f; // The distance at which the enemy stops moving towards its target.
+    public float pathfindingHeight = 1f; // The height used for pathfinding checks.
 
     [Header("Barrel Interaction")]
-    public float barrelKnockbackForce = 5f;
-    public float barrelDetectionRadius = 2f;
-    public string barrelTag = "Barrel"; // Configurable tag
+    public float barrelKnockbackForce = 5f; // The force applied to the enemy when hit by a barrel.
+    public float barrelDetectionRadius = 2f; // The radius to detect nearby barrels.
+    public string barrelTag = "Barrel"; // The tag used to identify barrels.
 
     [Header("Visual Effects")]
-    public GameObject hitEffect;
-    public float hitEffectDuration = 0.5f;
+    public GameObject hitEffect; // The effect to show when the enemy is hit.
+    public float hitEffectDuration = 0.5f; // How long the hit effect lasts.
 
     [Header("Knockback Settings")]
-    public float shotKnockbackForce = 5f; // Knockback force when shot
+    public float shotKnockbackForce = 5f; // The force of knockback when the enemy is shot.
 
     [Header("Color Settings")]
-    public Color fullHealthColor = Color.green;
-    public Color midHealthColor = Color.yellow;
-    public Color lowHealthColor = Color.red;
+    public Color fullHealthColor = Color.green; // Color when at full health.
+    public Color midHealthColor = Color.yellow; // Color at medium health.
+    public Color lowHealthColor = Color.red; // Color at low health.
 
     [Header("Player Knockback Settings")]
-    public float playerKnockbackForce = 7f;
+    public float playerKnockbackForce = 7f; // The force to apply to the player on attack.
 
     [Header("Jump & Spin Settings")]
-    public float jumpForce = 7f;
-    public float spinForce = 360f;
-    public float minJumpSpinInterval = 2f;
-    public float maxJumpSpinInterval = 6f;
+    public float jumpForce = 7f; // The force of the enemy's jump.
+    public float spinForce = 360f; // The force of the enemy's spin.
+    public float minJumpSpinInterval = 2f; // The minimum time between jump/spin actions.
+    public float maxJumpSpinInterval = 6f; // The maximum time between jump/spin actions.
 
     [Header("Audio")]
-    public AudioClip ghostAttackSound;
-    public AudioClip ghostIdleSound;
-    public AudioClip ghostIdleSound2;
-    public AudioClip ghostIdleSound3;
-    private AudioClip chosenIdleSound;
-    private Coroutine idleSoundCoroutine;
+    public AudioClip ghostAttackSound; // Sound for the enemy's attack.
+    public AudioClip ghostIdleSound; // First idle sound.
+    public AudioClip ghostIdleSound2; // Second idle sound.
+    public AudioClip ghostIdleSound3; // Third idle sound.
+    private AudioClip chosenIdleSound; // The currently selected idle sound.
+    private Coroutine idleSoundCoroutine; // Coroutine for playing idle sounds.
 
-    private Transform player;
-    private Rigidbody rb;
-    private NavMeshAgent pathfindingAgent;
-    private float lastAttackTime;
-    private bool isDead = false;
-    private CapsuleCollider enemyCollider;
-    private bool isGrounded = false;
-    private Vector3 moveDirection;
-    private float nextPathUpdate;
-    private Vector3 currentDestination;
-    private bool hasValidPath = false;
-    private bool isPathfinding = false;
-    private Vector3 lastHitDirection = Vector3.zero; // Store last hit direction
-    private MeshRenderer meshRenderer;
-    private Material enemyMaterial;
-    private bool doJumpSpin = false;
-    private float spinAmount = 0f;
-    private bool isStunned = false;
-    private float stunTimer = 0f;
-    public GameObject stunEffectPrefab; // Assign in inspector if you want a visual effect
-    private GameObject activeStunEffect;
-    private AudioSource audioSource;
-    private PlayerHealth playerHealth;
+    // Private variables for internal state management.
+    private Transform player; // Reference to the player's transform.
+    private Rigidbody rb; // The enemy's Rigidbody component.
+    private NavMeshAgent pathfindingAgent; // The NavMeshAgent for pathfinding.
+    private float lastAttackTime; // The time of the last attack.
+    private bool isDead = false; // Whether the enemy is dead.
+    private CapsuleCollider enemyCollider; // The enemy's collider.
+    private bool isGrounded = false; // Whether the enemy is on the ground.
+    private Vector3 moveDirection; // The current movement direction.
+    private float nextPathUpdate; // The time for the next path update.
+    private Vector3 currentDestination; // The current pathfinding destination.
+    private bool hasValidPath = false; // Whether a valid path exists.
+    private bool isPathfinding = false; // Whether pathfinding is in progress.
+    private Vector3 lastHitDirection = Vector3.zero; // The direction of the last hit.
+    private MeshRenderer meshRenderer; // The enemy's mesh renderer.
+    private Material enemyMaterial; // The enemy's material instance.
+    private bool doJumpSpin = false; // Flag to trigger a jump/spin.
+    private float spinAmount = 0f; // The amount to spin.
+    private bool isStunned = false; // Whether the enemy is stunned.
+    private float stunTimer = 0f; // The timer for the stun duration.
+    public GameObject stunEffectPrefab; // Visual effect for the stun.
+    private GameObject activeStunEffect; // The active stun effect instance.
+    private AudioSource audioSource; // The component for playing audio.
+    private PlayerHealth playerHealth; // Reference to the player's health script.
 
-    // Global cooldown for idle sounds
+    // Global cooldown to prevent idle sounds from overlapping.
     private static float lastGlobalIdleSoundTime = -100f;
-    private static float globalIdleSoundCooldown = 1.5f;
+    private static float globalIdleSoundCooldown = 2.5f;
 
+    // Called when the script instance is being loaded.
     void Start()
     {
-        // Find the player
+        // Find and store a reference to the player and their health component.
         GameObject playerObj = GameObject.FindGameObjectWithTag("Player");
         if (playerObj != null)
         {
@@ -93,7 +96,7 @@ public class Enemy : MonoBehaviour
             playerHealth = playerObj.GetComponent<PlayerHealth>();
         }
         
-        // Set up Rigidbody for physics
+        // Set up the Rigidbody for physics simulation.
         rb = GetComponent<Rigidbody>();
         if (rb == null)
         {
@@ -105,21 +108,20 @@ public class Enemy : MonoBehaviour
         rb.useGravity = true;
         rb.constraints = RigidbodyConstraints.FreezeRotationX | RigidbodyConstraints.FreezeRotationZ;
 
-        // Set up NavMeshAgent for pathfinding (but not movement)
+        // Configure the NavMeshAgent for pathfinding logic (not for movement).
         pathfindingAgent = GetComponent<NavMeshAgent>();
         if (pathfindingAgent == null)
         {
             pathfindingAgent = gameObject.AddComponent<NavMeshAgent>();
         }
-        // Configure NavMeshAgent to not interfere with physics
-        pathfindingAgent.enabled = false;
+        pathfindingAgent.enabled = false; // Disable NavMeshAgent's automatic control.
         pathfindingAgent.radius = 0.5f;
         pathfindingAgent.height = 2f;
         pathfindingAgent.stoppingDistance = stoppingDistance;
-        pathfindingAgent.updatePosition = false; // Don't let NavMeshAgent control position
-        pathfindingAgent.updateRotation = false; // Don't let NavMeshAgent control rotation
+        pathfindingAgent.updatePosition = false; // Physics-based movement will handle position.
+        pathfindingAgent.updateRotation = false; // Rotation will be handled manually.
 
-        // Set up the collider
+        // Ensure the enemy has a CapsuleCollider.
         enemyCollider = GetComponent<CapsuleCollider>();
         if (enemyCollider == null)
         {
@@ -129,18 +131,17 @@ public class Enemy : MonoBehaviour
             enemyCollider.center = new Vector3(0, 1f, 0);
         }
 
-        // Make sure the enemy is on the correct layer
+        // Assign the enemy to the "Enemy" layer for collision and targeting purposes.
         gameObject.layer = LayerMask.NameToLayer("Enemy");
         
-        // Initialize pathfinding
+        // Initialize pathfinding variables.
         nextPathUpdate = Time.time + pathUpdateInterval;
         currentDestination = transform.position;
         
-        // Get the MeshRenderer (assume it's on a child called "Body" or on this GameObject)
+        // Get the MeshRenderer and create a unique material instance to change its color.
         meshRenderer = GetComponentInChildren<MeshRenderer>();
         if (meshRenderer != null)
         {
-            // Use a unique material instance for this enemy
             enemyMaterial = meshRenderer.material;
         }
         else
@@ -149,14 +150,16 @@ public class Enemy : MonoBehaviour
         }
         
         Debug.Log($"Enemy spawned with health: {health}, layer: {LayerMask.LayerToName(gameObject.layer)}");
+        // Start the routine for random jump/spin actions.
         StartCoroutine(JumpSpinRoutine());
 
+        // Set up the AudioSource component.
         audioSource = GetComponent<AudioSource>();
         if (audioSource == null)
         {
             audioSource = gameObject.AddComponent<AudioSource>();
         }
-        // Choose a random idle sound
+        // Choose a random idle sound from the available clips.
         AudioClip[] idleSounds = new AudioClip[] { ghostIdleSound, ghostIdleSound2, ghostIdleSound3 };
         var validIdleSounds = System.Array.FindAll(idleSounds, s => s != null);
         if (validIdleSounds.Length > 0)
@@ -167,13 +170,15 @@ public class Enemy : MonoBehaviour
         {
             chosenIdleSound = null;
         }
-        // Start idle sound coroutine if any idle sound is assigned
-        // (Removed: idle sounds now play on jump/spin)
     }
 
+    // Called every frame.
     void Update()
     {
+        // Do nothing if the enemy is dead.
         if (isDead) return;
+
+        // Handle stun logic.
         if (isStunned)
         {
             stunTimer -= Time.deltaTime;
@@ -185,20 +190,20 @@ public class Enemy : MonoBehaviour
             return;
         }
 
-        // Check if grounded
+        // Check if the enemy is on the ground.
         CheckGrounded();
 
-        // Update pathfinding
+        // Update pathfinding periodically.
         if (Time.time >= nextPathUpdate && !isPathfinding)
         {
             UpdatePathfinding();
             nextPathUpdate = Time.time + pathUpdateInterval;
         }
 
-        // Calculate movement direction
+        // Determine the movement direction based on the path.
         CalculateMovementDirection();
 
-        // Check if we can attack the player
+        // Check if the enemy is in range to attack the player.
         if (player != null)
         {
             float distanceToPlayer = Vector3.Distance(transform.position, player.position);
@@ -208,16 +213,18 @@ public class Enemy : MonoBehaviour
             }
         }
 
-        // Check for nearby barrels
+        // Check for nearby barrels to interact with.
         CheckForBarrels();
     }
 
+    // Called every fixed-rate frame, used for physics calculations.
     void FixedUpdate()
     {
+        // Do nothing if the enemy is dead or stunned.
         if (isDead) return;
         if (isStunned) return;
 
-        // Apply movement force
+        // Apply movement force based on the calculated direction.
         if (moveDirection.magnitude > 0.1f)
         {
             float currentMoveSpeed = isGrounded ? moveSpeed : moveSpeed * airControl;
@@ -225,7 +232,7 @@ public class Enemy : MonoBehaviour
             rb.AddForce(moveForce, ForceMode.VelocityChange);
         }
 
-        // Limit horizontal velocity
+        // Limit the enemy's horizontal velocity to the move speed.
         Vector3 horizontalVelocity = new Vector3(rb.velocity.x, 0, rb.velocity.z);
         if (horizontalVelocity.magnitude > moveSpeed)
         {
@@ -233,7 +240,7 @@ public class Enemy : MonoBehaviour
             rb.velocity = new Vector3(horizontalVelocity.x, rb.velocity.y, horizontalVelocity.z);
         }
 
-        // Handle jump and spin
+        // Execute jump and spin if triggered.
         if (doJumpSpin && isGrounded)
         {
             rb.AddForce(Vector3.up * jumpForce, ForceMode.Impulse);
@@ -242,306 +249,278 @@ public class Enemy : MonoBehaviour
         }
     }
 
+    // Checks if the enemy is currently on the ground.
     void CheckGrounded()
     {
-        // Cast a ray downward to check if grounded
+        // Use a raycast downwards to detect the ground.
         RaycastHit hit;
         Vector3 rayStart = transform.position + Vector3.up * 0.1f;
         isGrounded = Physics.Raycast(rayStart, Vector3.down, out hit, groundCheckDistance + 0.1f, groundLayer);
+        Debug.DrawRay(rayStart, Vector3.down * (groundCheckDistance + 0.1f), isGrounded ? Color.green : Color.red);
     }
 
+    // Initiates the pathfinding process.
     void UpdatePathfinding()
     {
-        if (player == null || isPathfinding) return;
-
-        // Only attempt pathfinding if we're grounded and on a NavMesh
-        if (!isGrounded)
+        // Ensure pathfinding is not already running.
+        if (!isPathfinding)
         {
-            // If not grounded, use direct movement
-            currentDestination = player.position;
-            hasValidPath = false;
-            return;
+            // Start the coroutine to calculate the path.
+            StartCoroutine(CalculatePath());
         }
-
-        isPathfinding = true;
-        StartCoroutine(CalculatePath());
     }
 
+    // Coroutine to calculate the path to the player using NavMeshAgent.
     System.Collections.IEnumerator CalculatePath()
     {
-        // Temporarily enable NavMeshAgent for pathfinding
+        isPathfinding = true; // Mark pathfinding as in progress.
+        
+        // Temporarily enable NavMeshAgent to calculate the path.
         pathfindingAgent.enabled = true;
+        pathfindingAgent.nextPosition = transform.position; // Ensure agent starts from the current position.
+
+        NavMeshPath path = new NavMeshPath();
         
-        // Wait a frame to ensure the agent is properly initialized
-        yield return null;
-        
-        // Check if the agent is on a NavMesh before attempting pathfinding
-        if (!pathfindingAgent.isOnNavMesh)
+        // Check if a valid player position is available.
+        if (player != null)
         {
-            Debug.LogWarning($"Enemy at {transform.position} is not on NavMesh, using direct movement");
-            pathfindingAgent.enabled = false;
-            isPathfinding = false;
-            
-            // Fallback to direct movement
-            currentDestination = player.position;
-            hasValidPath = false;
-            yield break;
+            // Request a path calculation to the player's position.
+            pathfindingAgent.CalculatePath(player.position, path);
         }
 
-        // Attempt pathfinding
-        bool pathfindingSuccess = false;
-        try
+        // If the path calculation is successful and complete.
+        if (path.status == NavMeshPathStatus.PathComplete)
         {
-            pathfindingAgent.SetDestination(player.position);
-            pathfindingSuccess = true;
-        }
-        catch (System.Exception e)
-        {
-            Debug.LogWarning($"Pathfinding failed for enemy: {e.Message}");
-            pathfindingSuccess = false;
-        }
-
-        // Wait a frame for the path to be calculated (only if pathfinding was successful)
-        if (pathfindingSuccess)
-        {
-            yield return null;
+            hasValidPath = true; // Mark that a valid path has been found.
             
-            if (pathfindingAgent.hasPath && pathfindingAgent.remainingDistance > stoppingDistance)
+            // If the path has points, set the destination to the next corner.
+            if (path.corners.Length > 1)
             {
-                // Get the next waypoint on the path
-                if (pathfindingAgent.path.corners.Length > 1)
-                {
-                    currentDestination = pathfindingAgent.path.corners[1];
-                    hasValidPath = true;
-                }
-                else
-                {
-                    currentDestination = player.position;
-                    hasValidPath = true;
-                }
+                currentDestination = path.corners[1]; // The next point to move towards.
             }
-            else
+            else if (path.corners.Length == 1)
             {
-                // No valid path, move directly towards player
-                currentDestination = player.position;
-                hasValidPath = false;
+                currentDestination = path.corners[0]; // If there's only one point, move directly to it.
             }
         }
         else
         {
-            // Fallback to direct movement
-            currentDestination = player.position;
-            hasValidPath = false;
+            hasValidPath = false; // Mark the path as invalid.
         }
 
-        // Always disable NavMeshAgent after pathfinding
+        // Disable the NavMeshAgent again to allow for physics-based movement.
         pathfindingAgent.enabled = false;
-        isPathfinding = false;
+        isPathfinding = false; // Mark pathfinding as finished.
+        yield return null; // End the coroutine.
     }
 
+    // Determines the direction the enemy should move.
     void CalculateMovementDirection()
     {
-        if (player == null) return;
-
+        // If there's a valid path, move towards the next destination point.
         if (hasValidPath)
         {
-            // Use pathfinding destination
-            Vector3 directionToDestination = (currentDestination - transform.position).normalized;
-            directionToDestination.y = 0; // Keep movement horizontal
-            moveDirection = directionToDestination;
+            moveDirection = (currentDestination - transform.position).normalized;
+            
+            // Make the enemy face the direction of movement.
+            if (moveDirection.magnitude > 0.1f)
+            {
+                Quaternion lookRotation = Quaternion.LookRotation(new Vector3(moveDirection.x, 0, moveDirection.z));
+                transform.rotation = Quaternion.Slerp(transform.rotation, lookRotation, Time.deltaTime * 5f);
+            }
         }
         else
         {
-            // Fallback to direct movement towards player
-            Vector3 directionToPlayer = (player.position - transform.position).normalized;
-            directionToPlayer.y = 0; // Keep movement horizontal
-            moveDirection = directionToPlayer;
+            // If no valid path, stop moving.
+            moveDirection = Vector3.zero;
         }
     }
 
+    // Checks for nearby barrels and applies a force away from them.
     void CheckForBarrels()
     {
-        // Find all barrels within detection radius
-        Collider[] nearbyColliders = Physics.OverlapSphere(transform.position, barrelDetectionRadius);
+        // Find all colliders within the barrel detection radius on the default layer.
+        Collider[] colliders = Physics.OverlapSphere(transform.position, barrelDetectionRadius, 1 << LayerMask.NameToLayer("Default"));
         
-        foreach (Collider col in nearbyColliders)
+        foreach (var col in colliders)
         {
-            // Safer tag check
-            if (col.gameObject.CompareTag(barrelTag))
+            // If a collider with the "Barrel" tag is found.
+            if (col.CompareTag(barrelTag))
             {
-                // Apply knockback force away from barrel
-                Vector3 knockbackDirection = (transform.position - col.transform.position).normalized;
-                knockbackDirection.y = 0.5f; // Add some upward force
-                
-                if (rb != null)
-                {
-                    rb.AddForce(knockbackDirection * barrelKnockbackForce, ForceMode.Impulse);
-                    Debug.Log($"Enemy knocked back by barrel with force: {barrelKnockbackForce}");
-                }
+                // Calculate a direction away from the barrel and apply a force.
+                Vector3 directionFromBarrel = (transform.position - col.transform.position).normalized;
+                rb.AddForce(directionFromBarrel * barrelKnockbackForce, ForceMode.Impulse);
+                Debug.Log("Enemy avoided a barrel!");
             }
         }
     }
 
+    // Logic for the enemy's attack.
     void Attack()
     {
-        lastAttackTime = Time.time;
-        // Play attack sound only if player is not dead
-        if (ghostAttackSound != null && playerHealth != null && !playerHealth.isDead)
+        // Ensure the player exists and is not dead.
+        if (player == null || (playerHealth != null && playerHealth.isDead)) return;
+        
+        // Play the attack sound if available.
+        if (ghostAttackSound != null && audioSource != null)
         {
             audioSource.PlayOneShot(ghostAttackSound, 0.7f);
         }
         
-        // Try to damage the player
-        if (player != null)
-        {
-            PlayerHealth playerHealth = player.GetComponent<PlayerHealth>();
-            if (playerHealth != null)
-            {
-                // Knockback direction: from enemy to player
-                Vector3 knockbackDir = (player.position - transform.position).normalized;
-                playerHealth.TakeDamage(attackDamage, knockbackDir, playerKnockbackForce);
-            }
-        }
+        Debug.Log("Enemy attacking player!");
+        // Reset the attack cooldown timer.
+        lastAttackTime = Time.time;
+        // Damage the player and apply knockback.
+        playerHealth?.TakeDamage(attackDamage, (player.position - transform.position).normalized, playerKnockbackForce);
     }
 
-    // Call this to apply knockback when shot
+    // Applies a knockback force to the enemy.
     public void ApplyKnockback(Vector3 direction, float force)
     {
-        if (rb != null && !isDead)
-        {
-            Vector3 knockback = direction.normalized;
-            knockback.y = 0.3f; // Add a bit of upward force
-            rb.AddForce(knockback * force, ForceMode.Impulse);
-            lastHitDirection = knockback;
-            Debug.Log($"Enemy knocked back with force {force} in direction {knockback}");
-        }
+        // Ensure the direction is normalized and apply the force.
+        direction.Normalize();
+        rb.AddForce(direction * force, ForceMode.Impulse);
+        Debug.Log($"Enemy knocked back with force: {force}");
     }
 
+    // Reduces the enemy's health and handles the consequences.
     public void TakeDamage(float amount, Vector3? hitDirection = null, float? knockbackForce = null)
     {
-        Debug.Log($"Enemy taking damage: {amount}. Current health: {health}");
+        // Do nothing if the enemy is already dead.
+        if (isDead) return;
+
         health -= amount;
+        Debug.Log($"Enemy took {amount} damage, health is now {health}");
         
-        // Apply knockback if direction is provided
-        if (hitDirection.HasValue)
-        {
-            ApplyKnockback(hitDirection.Value, knockbackForce ?? shotKnockbackForce);
-        }
-        
-        // Create hit effect
+        // Show a hit effect if one is assigned.
         if (hitEffect != null)
         {
-            GameObject effect = Instantiate(hitEffect, transform.position + Vector3.up, Quaternion.identity);
+            GameObject effect = Instantiate(hitEffect, transform.position, Quaternion.identity);
             Destroy(effect, hitEffectDuration);
         }
 
-        if (health <= 0 && !isDead)
+        // Apply knockback if a direction and force are provided.
+        if (hitDirection.HasValue)
         {
-            Debug.Log("Enemy health reached 0, calling Die()");
-            Die();
+            lastHitDirection = hitDirection.Value;
+            float force = knockbackForce.HasValue ? knockbackForce.Value : shotKnockbackForce;
+            ApplyKnockback(lastHitDirection, force);
         }
-        else
+
+        // If health drops to zero, the enemy dies.
+        if (health <= 0)
         {
-            Debug.Log($"Enemy health after damage: {health}");
+            Die();
         }
     }
 
+    // Handles the enemy's death.
     void Die()
     {
-        Debug.Log("Enemy dying");
         isDead = true;
+        Debug.Log("Enemy has died.");
+        
+        // Stop any existing audio.
         if (audioSource != null && audioSource.isPlaying)
         {
             audioSource.Stop();
         }
-        
-        // Disable physics
-        if (rb != null)
-        {
-            rb.isKinematic = true;
-        }
 
-        // Disable pathfinding
-        if (pathfindingAgent != null)
-        {
-            pathfindingAgent.enabled = false;
-        }
-
-        // Disable the collider
+        // Disable the collider to prevent further interactions.
         if (enemyCollider != null)
         {
             enemyCollider.enabled = false;
         }
+        
+        // Stop the Rigidbody from moving.
+        if (rb != null)
+        {
+            rb.velocity = Vector3.zero;
+            rb.isKinematic = true; // Stop physics simulation.
+        }
 
-        // Destroy the enemy after a short delay
+        // Destroy the enemy GameObject after a short delay.
         Destroy(gameObject, 2f);
     }
 
+    // Draws debug gizmos in the editor for visualization.
     void OnDrawGizmosSelected()
     {
-        // Draw barrel detection radius
+        // Draw a wire sphere to show the attack range.
+        Gizmos.color = Color.red;
+        Gizmos.DrawWireSphere(transform.position, attackRange);
+
+        // Draw a wire sphere to show the barrel detection radius.
         Gizmos.color = Color.yellow;
         Gizmos.DrawWireSphere(transform.position, barrelDetectionRadius);
-        
-        // Draw ground check ray
-        Gizmos.color = Color.green;
-        Vector3 rayStart = transform.position + Vector3.up * 0.1f;
-        Gizmos.DrawRay(rayStart, Vector3.down * (groundCheckDistance + 0.1f));
-        
-        // Draw current destination
-        Gizmos.color = Color.blue;
-        Gizmos.DrawWireSphere(currentDestination, 0.5f);
-        Gizmos.DrawLine(transform.position, currentDestination);
+
+        // Draw a line to show the current movement direction.
+        if (moveDirection.magnitude > 0.1f)
+        {
+            Gizmos.color = Color.blue;
+            Gizmos.DrawLine(transform.position, transform.position + moveDirection * 2f);
+        }
     }
 
+    // Coroutine for the enemy's jump and spin behavior.
     System.Collections.IEnumerator JumpSpinRoutine()
     {
-        AudioClip[] idleSounds = new AudioClip[] { ghostIdleSound, ghostIdleSound2, ghostIdleSound3 };
-        var validIdleSounds = System.Array.FindAll(idleSounds, s => s != null);
+        // Loop indefinitely while the enemy is alive.
         while (!isDead)
         {
-            float wait = Random.Range(minJumpSpinInterval, maxJumpSpinInterval);
-            yield return new WaitForSeconds(wait);
-            if (!isDead && isGrounded)
+            // Wait for a random interval before the next action.
+            float waitTime = Random.Range(minJumpSpinInterval, maxJumpSpinInterval);
+            yield return new WaitForSeconds(waitTime);
+
+            // Trigger a jump and spin.
+            doJumpSpin = true;
+            // Choose a random spin direction.
+            spinAmount = Random.Range(0, 2) == 0 ? spinForce : -spinForce;
+
+            // Play a random idle sound if available and cooldown has passed.
+            if (chosenIdleSound != null && Time.time >= lastGlobalIdleSoundTime + globalIdleSoundCooldown)
             {
-                doJumpSpin = true;
-                spinAmount = Random.Range(-spinForce, spinForce);
-                // Play a random idle sound when jumping/spinning, only if player is not dead
-                if (validIdleSounds.Length > 0 && playerHealth != null && !playerHealth.isDead)
-                {
-                    if (Time.time > lastGlobalIdleSoundTime + globalIdleSoundCooldown)
-                    {
-                        AudioClip clip = validIdleSounds[Random.Range(0, validIdleSounds.Length)];
-                        audioSource.PlayOneShot(clip, 0.15f);
-                        lastGlobalIdleSoundTime = Time.time;
-                    }
-                }
+                // Play a sound with a lower volume.
+                audioSource.PlayOneShot(chosenIdleSound, 0.15f);
+                lastGlobalIdleSoundTime = Time.time;
             }
         }
     }
 
+    // Stuns the enemy for a given duration.
     public void Stun(float duration)
     {
-        if (isDead) return;
         isStunned = true;
         stunTimer = duration;
+        
+        // Stop movement.
+        rb.velocity = Vector3.zero;
+
+        // Show stun effect if available.
         if (stunEffectPrefab != null && activeStunEffect == null)
         {
             activeStunEffect = Instantiate(stunEffectPrefab, transform.position + Vector3.up, Quaternion.identity, transform);
         }
+
+        // Play an idle sound to indicate being stunned.
+        if (chosenIdleSound != null)
+        {
+            // audioSource.PlayOneShot(chosenIdleSound, 0.4f); // Removed this line
+        }
     }
 
-    // Coroutine to play idle sounds at random intervals
+    // Coroutine to play idle sounds at random intervals. (Currently unused)
     private System.Collections.IEnumerator PlayIdleSoundsRandomly(AudioClip[] idleSounds)
     {
+        // This coroutine is not currently called but is kept for potential future use.
         while (!isDead)
         {
-            float wait = Random.Range(4f, 8f);
-            yield return new WaitForSeconds(wait);
-            if (!isDead && idleSounds.Length > 0)
+            yield return new WaitForSeconds(Random.Range(5f, 15f));
+            var validSounds = System.Array.FindAll(idleSounds, s => s != null);
+            if (validSounds.Length > 0)
             {
-                AudioClip clip = idleSounds[Random.Range(0, idleSounds.Length)];
-                audioSource.PlayOneShot(clip, 0.4f);
+                AudioClip clip = validSounds[Random.Range(0, validSounds.Length)];
+                audioSource.PlayOneShot(clip, 0.2f);
             }
         }
     }

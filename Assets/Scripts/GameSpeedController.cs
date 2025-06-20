@@ -2,52 +2,55 @@ using UnityEngine;
 using UnityEngine.UI;
 using TMPro;
 
+// This script manages the game's speed, allowing it to be changed via UI or keyboard input.
 public class GameSpeedController : MonoBehaviour
 {
     [Header("Speed Settings")]
-    public float currentSpeed = 0.5f;
-    public float minSpeed = 0.1f;
-    public float maxSpeed = 5f;
-    public float speedStep = 0.5f;
+    public float currentSpeed = 0.5f; // The current playback speed of the game.
+    public float minSpeed = 0.1f; // The minimum allowed game speed.
+    public float maxSpeed = 5f; // The maximum allowed game speed.
+    public float speedStep = 0.5f; // The amount to change the speed by with each step.
 
     [Header("UI Elements")]
-    public Slider speedSlider;
-    public TextMeshProUGUI speedText;
-    public Button speedUpButton;
-    public Button speedDownButton;
-    public Button resetButton;
+    public Slider speedSlider; // The slider to control game speed.
+    public TextMeshProUGUI speedText; // The text to display the current speed.
+    public Button speedUpButton; // The button to increase the speed.
+    public Button speedDownButton; // The button to decrease the speed.
+    public Button resetButton; // The button to reset the speed to normal.
 
     [Header("Input Settings")]
-    public KeyCode speedUpKey = KeyCode.Equals; // = key
-    public KeyCode speedDownKey = KeyCode.Minus; // - key
-    public KeyCode resetSpeedKey = KeyCode.R; // R key
+    public KeyCode speedUpKey = KeyCode.Equals; // The key to increase speed (=).
+    public KeyCode speedDownKey = KeyCode.Minus; // The key to decrease speed (-).
+    public KeyCode resetSpeedKey = KeyCode.R; // The key to reset speed.
 
     [Header("Auto-Increase Settings")]
-    public bool autoIncrease = true;
-    public float increaseInterval = 10f; // seconds
-    public float autoIncreaseAmount = 0.1f;
-    private float increaseTimer = 0f;
+    public bool autoIncrease = true; // Whether the game speed should increase automatically over time.
+    public float increaseInterval = 10f; // The interval in seconds for auto-increasing speed.
+    public float autoIncreaseAmount = 0.1f; // The amount to increase the speed by automatically.
+    private float increaseTimer = 0f; // A timer to track the auto-increase interval.
 
+    // Called when the script instance is being loaded.
     void Start()
     {
-        // Initialize the speed
+        // Set the initial game speed.
         SetGameSpeed(currentSpeed);
         
-        // Set up UI elements if they exist
+        // Configure the UI elements.
         SetupUI();
         
         Debug.Log($"Game speed initialized at {currentSpeed}x");
     }
 
+    // Called every frame.
     void Update()
     {
-        // Handle keyboard input
+        // Process keyboard input for speed changes.
         HandleKeyboardInput();
 
-        // Auto-increase game speed over time
+        // Automatically increase the game speed over time if enabled.
         if (autoIncrease && currentSpeed < maxSpeed)
         {
-            increaseTimer += Time.unscaledDeltaTime;
+            increaseTimer += Time.unscaledDeltaTime; // Use unscaled time to ensure timer is not affected by game speed.
             if (increaseTimer >= increaseInterval)
             {
                 increaseTimer = 0f;
@@ -56,6 +59,7 @@ public class GameSpeedController : MonoBehaviour
         }
     }
 
+    // Handles keyboard inputs for controlling the game speed.
     void HandleKeyboardInput()
     {
         if (Input.GetKeyDown(speedUpKey))
@@ -72,9 +76,10 @@ public class GameSpeedController : MonoBehaviour
         }
     }
 
+    // Sets up the UI elements and their listeners.
     void SetupUI()
     {
-        // Set up slider
+        // Configure the speed slider.
         if (speedSlider != null)
         {
             speedSlider.minValue = minSpeed;
@@ -83,75 +88,77 @@ public class GameSpeedController : MonoBehaviour
             speedSlider.onValueChanged.AddListener(OnSliderChanged);
         }
 
-        // Set up buttons
+        // Add listeners to the control buttons.
         if (speedUpButton != null)
         {
             speedUpButton.onClick.AddListener(IncreaseSpeed);
         }
-
         if (speedDownButton != null)
         {
             speedDownButton.onClick.AddListener(DecreaseSpeed);
         }
-
         if (resetButton != null)
         {
             resetButton.onClick.AddListener(ResetSpeed);
         }
 
-        // Update text
+        // Update the speed display text.
         UpdateSpeedText();
     }
 
+    // Sets the game's time scale to a new speed.
     public void SetGameSpeed(float newSpeed)
     {
-        // Clamp the speed between min and max values
+        // Ensure the new speed is within the allowed range.
         newSpeed = Mathf.Clamp(newSpeed, minSpeed, maxSpeed);
         
-        // Set the time scale
+        // Apply the new speed to the game's time scale.
         Time.timeScale = newSpeed;
         currentSpeed = newSpeed;
         
-        // Update UI
+        // Update the UI to reflect the change.
         UpdateUI();
         
         Debug.Log($"Game speed set to {newSpeed}x");
     }
 
+    // Increases the game speed by one step.
     public void IncreaseSpeed()
     {
-        float newSpeed = currentSpeed + speedStep;
-        SetGameSpeed(newSpeed);
+        SetGameSpeed(currentSpeed + speedStep);
     }
 
+    // Decreases the game speed by one step.
     public void DecreaseSpeed()
     {
-        float newSpeed = currentSpeed - speedStep;
-        SetGameSpeed(newSpeed);
+        SetGameSpeed(currentSpeed - speedStep);
     }
 
+    // Resets the game speed to 1x (normal speed).
     public void ResetSpeed()
     {
         SetGameSpeed(1f);
     }
 
+    // Called when the slider's value changes.
     void OnSliderChanged(float value)
     {
         SetGameSpeed(value);
     }
 
+    // Updates all UI elements to match the current game speed.
     void UpdateUI()
     {
-        // Update slider
+        // Update the slider's value.
         if (speedSlider != null)
         {
             speedSlider.value = currentSpeed;
         }
-
-        // Update text
+        // Update the speed display text.
         UpdateSpeedText();
     }
 
+    // Updates the text that displays the current game speed.
     void UpdateSpeedText()
     {
         if (speedText != null)
@@ -160,12 +167,13 @@ public class GameSpeedController : MonoBehaviour
         }
     }
 
-    // Public methods for external access
+    // Returns the current game speed.
     public float GetCurrentSpeed()
     {
         return currentSpeed;
     }
 
+    // Sets the minimum and maximum speed range.
     public void SetSpeedRange(float min, float max)
     {
         minSpeed = min;
@@ -177,25 +185,28 @@ public class GameSpeedController : MonoBehaviour
             speedSlider.maxValue = maxSpeed;
         }
         
-        // Clamp current speed to new range
+        // Re-apply the current speed to clamp it to the new range if necessary.
         SetGameSpeed(currentSpeed);
     }
 
+    // Called when the object is destroyed.
     void OnDestroy()
     {
-        // Reset time scale when the controller is destroyed
+        // Reset the time scale to normal to avoid a frozen game state.
         Time.timeScale = 1f;
     }
 
+    // Called when the application is paused or resumed.
     void OnApplicationPause(bool pauseStatus)
     {
-        // Reset time scale when game is paused
+        // Reset time scale when the game is paused.
         if (pauseStatus)
         {
             Time.timeScale = 1f;
         }
         else
         {
+            // Restore the game speed when resumed.
             Time.timeScale = currentSpeed;
         }
     }

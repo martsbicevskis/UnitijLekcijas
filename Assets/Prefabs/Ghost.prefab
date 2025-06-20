@@ -256,9 +256,9 @@ MonoBehaviour:
     type: 3}
   hitEffectDuration: 0.5
   shotKnockbackForce: 10
-  fullHealthColor: {r: 0, g: 1, b: 0, a: 1}
-  midHealthColor: {r: 1, g: 0.92156863, b: 0.015686275, a: 1}
-  lowHealthColor: {r: 1, g: 0, b: 0, a: 1}
+  fullHealthColor: {r: 0.21960786, g: 0.21960786, b: 0.21960786, a: 1}
+  midHealthColor: {r: 0.21960786, g: 0.21960786, b: 0.21960786, a: 1}
+  lowHealthColor: {r: 0.21960786, g: 0.21960786, b: 0.21960786, a: 1}
   playerKnockbackForce: 30
   jumpForce: 7
   spinForce: 180

@@ -1,69 +1,65 @@
 using UnityEngine;
 
+// This script handles the player's shooting mechanics, including firing, raycasting, and barrel spawning.
 public class PlayerShooting : MonoBehaviour
 {
     [Header("Shooting Settings")]
-    public float damage = 10f;
-    public float range = 100f;
-    public float fireRate = 15f;
-    public Camera playerCamera;
+    public float damage = 10f; // The amount of damage each shot deals.
+    public float range = 100f; // The maximum range of a shot.
+    public float fireRate = 15f; // The number of shots per second.
+    public Camera playerCamera; // A reference to the player's camera.
 
     [Header("Barrel Spawning")]
-    public GameObject barrelPrefab;
-    public float barrelSpawnDistance = 5f;
-    public LayerMask barrelSpawnLayers = -1; // Default to all layers
-    public float barrelSpawnCooldown = 1f;
-    private float nextBarrelSpawnTime = 0f;
+    public GameObject barrelPrefab; // The barrel prefab to spawn.
+    public float barrelSpawnDistance = 5f; // The distance at which to spawn barrels.
+    public LayerMask barrelSpawnLayers = -1; // The layers on which barrels can be spawned.
+    public float barrelSpawnCooldown = 1f; // The cooldown for spawning barrels.
+    private float nextBarrelSpawnTime = 0f; // A timer for barrel spawning.
 
     [Header("Effects")]
-    private WeaponEffects weaponEffects;
-    private ParticleSystem muzzleFlash;
-    private GameObject impactEffect;
-    private WeaponController weaponController;
+    private WeaponEffects weaponEffects; // A reference to the weapon effects script.
+    private ParticleSystem muzzleFlash; // The particle system for the muzzle flash.
+    private GameObject impactEffect; // The effect to create on impact.
+    private WeaponController weaponController; // A reference to the weapon controller.
 
     [Header("Audio")]
-    public AudioClip shootingSound;
-    private AudioSource audioSource;
+    public AudioClip shootingSound; // The sound to play when shooting.
+    private AudioSource audioSource; // The component for playing audio.
 
-    private float nextTimeToFire = 0f;
+    private float nextTimeToFire = 0f; // A timer to control the fire rate.
 
+    // Called when the script instance is being loaded.
     void Start()
     {
-        // If no camera is assigned, try to find it
+        // Find the camera if it's not assigned.
         if (playerCamera == null)
         {
             playerCamera = GetComponentInChildren<Camera>();
         }
 
-        // Set up weapon effects
+        // Set up weapon effects dynamically.
         weaponEffects = gameObject.AddComponent<WeaponEffects>();
         muzzleFlash = weaponEffects.CreateMuzzleFlash();
         impactEffect = weaponEffects.CreateImpactEffect();
 
-        // Add weapon controller if it doesn't exist
-        weaponController = GetComponent<WeaponController>();
-        if (weaponController == null)
-        {
-            weaponController = gameObject.AddComponent<WeaponController>();
-        }
-
-        audioSource = GetComponent<AudioSource>();
-        if (audioSource == null)
-        {
-            audioSource = gameObject.AddComponent<AudioSource>();
-        }
+        // Ensure a WeaponController exists.
+        weaponController = GetComponent<WeaponController>() ?? gameObject.AddComponent<WeaponController>();
+        
+        // Ensure an AudioSource exists.
+        audioSource = GetComponent<AudioSource>() ?? gameObject.AddComponent<AudioSource>();
     }
 
+    // Called every frame.
     void Update()
     {
-        // Check if player can shoot (left mouse button)
+        // Handle shooting input.
         if (Input.GetButton("Fire1") && Time.time >= nextTimeToFire)
         {
             nextTimeToFire = Time.time + 1f / fireRate;
             Shoot();
         }
 
-        // Check if player can spawn barrel (right mouse button)
+        // Handle barrel spawning input.
         if (Input.GetButtonDown("Fire2") && Time.time >= nextBarrelSpawnTime)
         {
             nextBarrelSpawnTime = Time.time + barrelSpawnCooldown;
@@ -71,6 +67,7 @@ public class PlayerShooting : MonoBehaviour
         }
     }
 
+    // Spawns a barrel in the world.
     void SpawnBarrel()
     {
         if (barrelPrefab == null)
@@ -79,78 +76,64 @@ public class PlayerShooting : MonoBehaviour
             return;
         }
 
-        // Create a ray from the camera
+        // Determine the spawn position using a raycast.
         RaycastHit hit;
         Vector3 spawnPosition;
-        
         if (Physics.Raycast(playerCamera.transform.position, playerCamera.transform.forward, out hit, range, barrelSpawnLayers))
         {
-            // Spawn barrel at the hit point
-            spawnPosition = hit.point;
-            Debug.Log($"Spawning barrel at hit point: {spawnPosition}");
+            spawnPosition = hit.point; // Spawn at the hit point.
         }
         else
         {
-            // Spawn barrel at maximum range if no hit detected
-            spawnPosition = playerCamera.transform.position + playerCamera.transform.forward * barrelSpawnDistance;
-            Debug.Log($"Spawning barrel at max distance: {spawnPosition}");
+            spawnPosition = playerCamera.transform.position + playerCamera.transform.forward * barrelSpawnDistance; // Spawn at a default distance.
         }
 
-        // Instantiate the barrel
-        GameObject barrel = Instantiate(barrelPrefab, spawnPosition, Quaternion.identity);
-        Debug.Log($"Barrel spawned successfully at {spawnPosition}");
+        // Instantiate the barrel.
+        Instantiate(barrelPrefab, spawnPosition, Quaternion.identity);
     }
 
+    // Handles the logic for firing a shot.
     void Shoot()
     {
-        // Play muzzle flash effect
+        // Play visual and audio effects for the shot.
         muzzleFlash.Play();
-        Debug.Log("Shot fired!");
-
-        // Play shooting sound
         if (shootingSound != null)
         {
             audioSource.PlayOneShot(shootingSound, 0.1f);
         }
 
-        // Create a ray from the camera
+        // Perform a raycast to detect hits.
         RaycastHit hit;
         if (Physics.Raycast(playerCamera.transform.position, playerCamera.transform.forward, out hit, range))
         {
-            Debug.Log($"Hit something: {hit.transform.name} on layer {LayerMask.LayerToName(hit.transform.gameObject.layer)}");
-            
-            // Check if we hit an enemy (including parent objects)
-            Enemy enemy = hit.transform.GetComponent<Enemy>();
-            if (enemy == null)
-            {
-                enemy = hit.transform.GetComponentInParent<Enemy>();
-            }
-            
-            if (enemy != null)
-            {
-                Debug.Log($"Hit enemy! Applying {damage} damage");
-                // Calculate knockback direction: from player to hit point
-                Vector3 knockbackDir = (hit.point - playerCamera.transform.position).normalized;
-                enemy.TakeDamage(damage, knockbackDir, null); // Use enemy's default knockback force
-            }
-            // Check if we hit a target
-            else
-            {
-                Target target = hit.transform.GetComponent<Target>();
-                if (target != null)
-                {
-                    Debug.Log($"Hit target! Applying {damage} damage");
-                    target.TakeDamage(damage);
-                }
-            }
+            // Process the hit target.
+            HandleHit(hit);
 
-            // Create impact effect
+            // Create an impact effect at the hit point.
             GameObject impact = Instantiate(impactEffect, hit.point, Quaternion.LookRotation(hit.normal));
-            Destroy(impact, 2f); // Destroy impact effect after 2 seconds
+            Destroy(impact, 2f);
         }
-        else
+    }
+
+    // Processes the object that was hit by the raycast.
+    void HandleHit(RaycastHit hit)
+    {
+        // Check if the hit object is an enemy.
+        Enemy enemy = hit.transform.GetComponent<Enemy>() ?? hit.transform.GetComponentInParent<Enemy>();
+        if (enemy != null)
         {
-            Debug.Log("Shot missed - no hit detected");
+            // Apply damage and knockback to the enemy.
+            Vector3 knockbackDir = (hit.point - playerCamera.transform.position).normalized;
+            enemy.TakeDamage(damage, knockbackDir, null);
+            return; // Exit after handling the enemy hit.
+        }
+
+        // Check if the hit object is a destructible target.
+        Target target = hit.transform.GetComponent<Target>();
+        if (target != null)
+        {
+            // Apply damage to the target.
+            target.TakeDamage(damage);
         }
     }
 }
